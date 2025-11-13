@@ -1,4 +1,5 @@
 ﻿using Comora;
+using GameProject2.Graphics3D;
 using GameProject2.SaveSystem;
 using GameProject2.StateManagement;
 using GameProject2.Tilemaps;
@@ -24,10 +25,20 @@ namespace GameProject2.Screens
         private Camera camera;
         private ParticleSystem particleSystem;
 
+        private string currentRoom = "StartingRoom";
+        private string lastRoomName = null;
+
         private Texture2D vaseTexture;
         private Texture2D coinTexture;
         private List<Vase> vases = new List<Vase>();
         private List<Coin> coins = new List<Coin>();
+
+        private Trophy trophy;
+        private bool showTrophyPrompt = false;
+        private Vector2 trophyPromptPosition;
+        private KeyboardState previousKeyboardState;
+        private Matrix view3D;
+        private Matrix projection3D;
 
         private Texture2D skullSheet;
         private List<Skull> enemies = new List<Skull>();
@@ -181,6 +192,29 @@ namespace GameProject2.Screens
                 }
             }
 
+            // Setup 3D projection
+            projection3D = Matrix.CreatePerspectiveFieldOfView(
+                MathHelper.PiOver4,
+                ScreenManager.GraphicsDevice.Viewport.AspectRatio,
+                0.1f,
+                1000f
+            );
+
+            // Look for trophy spawn point in tilemap
+            foreach (var objectLayer in tilemap.ObjectLayers)
+            {
+                foreach (var obj in objectLayer.Objects)
+                {
+                    if (obj.Class == "Trophy")
+                    {
+                        tilemapScale = 4f;
+                        Vector2 trophyPos = new Vector2(obj.X * tilemapScale, obj.Y * tilemapScale);
+                        trophy = new Trophy(ScreenManager.GraphicsDevice, trophyPos);
+                        break;
+                    }
+                }
+            }
+
             LoadGame();
         }
 
@@ -194,19 +228,31 @@ namespace GameProject2.Screens
         {
             base.Update(gameTime, otherScreenHasFocus, coveredByOtherScreen);
 
+            // Don't process input if another screen has focus
+            if (otherScreenHasFocus)
+            {
+                previousKeyboardState = Keyboard.GetState();
+                return;
+            }
+
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            showTrophyPrompt = false;
 
             if (instructionTimer > 0)
                 instructionTimer -= dt;
 
             // spawn timer
-            spawnTimer += dt;
-            if (spawnTimer >= spawnInterval)
+            if (currentRoom != "TrophyRoom")
             {
-                spawnTimer = 0f;
-                enemies.Add(new Skull(skullSheet, 10, 10,
-                    ScreenManager.GraphicsDevice.Viewport.Width,
-                    ScreenManager.GraphicsDevice.Viewport.Height));
+                spawnTimer += dt;
+                if (spawnTimer >= spawnInterval)
+                {
+                    spawnTimer = 0f;
+                    enemies.Add(new Skull(skullSheet, 10, 10,
+                        ScreenManager.GraphicsDevice.Viewport.Width,
+                        ScreenManager.GraphicsDevice.Viewport.Height));
+                }
             }
 
             // update all skulls
@@ -218,7 +264,6 @@ namespace GameProject2.Screens
             for (int i = enemies.Count - 1; i >= 0; i--)
             {
                 var skull = enemies[i];
-
                 if (playerHitbox.Intersects(skull.RotatedHitbox))
                 {
                     if (player.State != PlayerState.Attack1 && player.State != PlayerState.Hurt)
@@ -227,13 +272,8 @@ namespace GameProject2.Screens
                         player.Animation = player.hurtAnimations[(int)player.Direction];
                         player.Animation.IsLooping = false;
                         player.Animation.setFrame(0);
-
                         hud.TakeDamage();
-
-                        //AudioManager.PlayHurtSound();
-
                         particleSystem.CreateSkullDeathEffect(skull.Position);
-
                         enemies.RemoveAt(i);
                     }
                 }
@@ -277,10 +317,7 @@ namespace GameProject2.Screens
                     if (!vases[i].IsDestroyed && attackHitbox.Intersects(vases[i].Hitbox))
                     {
                         vases[i].IsDestroyed = true;
-
-                        // Spawn a coin at vase position
                         coins.Add(new Coin(coinTexture, vases[i].Position, 8, 8));
-
                         vases.RemoveAt(i);
                     }
                 }
@@ -297,16 +334,75 @@ namespace GameProject2.Screens
                 }
             }
 
+            // Check door collisions for room transitions
+            float tilemapScale = 4f;
+            Rectangle currentPlayerHitbox = player.Hitbox;
+
+            KeyboardState currentKeyboardState = Keyboard.GetState();
+
+            foreach (var objectLayer in tilemap.ObjectLayers)
+            {
+                foreach (var obj in objectLayer.Objects)
+                {
+                    if (obj.Class == "Door")
+                    {
+                        Rectangle doorRect = new Rectangle(
+                            (int)(obj.X * tilemapScale),
+                            (int)(obj.Y * tilemapScale),
+                            (int)(obj.Width * tilemapScale),
+                            (int)(obj.Height * tilemapScale)
+                        );
+
+                        if (currentPlayerHitbox.Intersects(doorRect))
+                        {
+                            string nextRoom = obj.Name;
+                            LoadRoom(nextRoom, $"From{currentRoom}");
+                            return;
+                        }
+                    }
+                    else if (obj.Class == "Trophy")
+                    {
+                        Rectangle trophyRect = new Rectangle(
+                            (int)(obj.X * tilemapScale),
+                            (int)(obj.Y * tilemapScale),
+                            (int)(obj.Width * tilemapScale),
+                            (int)(obj.Height * tilemapScale)
+                        );
+
+                        if (currentPlayerHitbox.Intersects(trophyRect))
+                        {
+                            showTrophyPrompt = true;
+                            trophyPromptPosition = new Vector2(obj.X * tilemapScale, obj.Y * tilemapScale - 50);
+
+                            if (currentKeyboardState.IsKeyDown(Keys.E) && previousKeyboardState.IsKeyUp(Keys.E))
+                            {
+                                System.Diagnostics.Debug.WriteLine($"E pressed - opening trophy screen");
+                                showTrophyPrompt = false;
+                                ScreenManager.AddScreen(new TrophyScreen(), ControllingPlayer);
+                                previousKeyboardState = currentKeyboardState; // Update immediately
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
             particleSystem.Update(gameTime);
-
             player.Update(gameTime, enemies, particleSystem, collisionBoxes);
-
             hud.Update(gameTime);
 
-            float tilemapScale = 4f;
+            if (trophy != null)
+                trophy.Update(gameTime);
+
+            // Update 3D view to match camera
+            view3D = Matrix.CreateLookAt(
+                new Vector3(camera.Position.X, 10f, camera.Position.Y + 15f),
+                new Vector3(camera.Position.X, 0f, camera.Position.Y),
+                Vector3.Up
+            );
+
             float tilemapWidth = tilemap.Width * tilemap.TileWidth * tilemapScale;
             float tilemapHeight = tilemap.Height * tilemap.TileHeight * tilemapScale;
-
             float halfScreenWidth = ScreenManager.GraphicsDevice.Viewport.Width / 2f;
             float halfScreenHeight = ScreenManager.GraphicsDevice.Viewport.Height / 2f;
 
@@ -314,6 +410,8 @@ namespace GameProject2.Screens
                 MathHelper.Clamp(player.Position.X, halfScreenWidth, tilemapWidth - halfScreenWidth),
                 MathHelper.Clamp(player.Position.Y, halfScreenHeight, tilemapHeight - halfScreenHeight)
             );
+
+            previousKeyboardState = currentKeyboardState;
 
             camera.Update(gameTime);
         }
@@ -331,6 +429,7 @@ namespace GameProject2.Screens
                 RasterizerState.CullNone
             );
 
+            // Draw tilemap layers
             float baseDepth = 0.99f;
             float depthStep = 0.01f;
             for (int i = 0; i < tilemap.Layers.Count; i++)
@@ -339,6 +438,7 @@ namespace GameProject2.Screens
                 TilemapRenderer.DrawLayer(_spriteBatch, tilemap, tilemap.Layers[i], layerDepth, 4f);
             }
 
+            // Build and draw sprite list
             var drawList = new List<SpriteAnimation>();
             if (player.Animation != null)
                 drawList.Add(player.Animation);
@@ -371,9 +471,28 @@ namespace GameProject2.Screens
 
             particleSystem.Draw(_spriteBatch, 0.05f);
 
+            // Draw trophy interaction prompt IN WORLD SPACE
+            if (showTrophyPrompt)
+            {
+                string promptText = "E";
+                Vector2 textSize = instructionFont.MeasureString(promptText);
+
+                _spriteBatch.DrawString(
+                    instructionFont,
+                    promptText,
+                    trophyPromptPosition,
+                    Color.White,
+                    0f,
+                    textSize / 2f,
+                    2f,
+                    SpriteEffects.None,
+                    0.01f
+                );
+            }
+
             _spriteBatch.End();
 
-            // Draw UI elements in screen space
+            // Draw UI elements in screen space (no camera)
             _spriteBatch.Begin(
                 SpriteSortMode.Deferred,
                 BlendState.AlphaBlend,
@@ -445,6 +564,7 @@ namespace GameProject2.Screens
                 MaxHealth = hud.MaxHealth,
                 PlayerX = player.Position.X,
                 PlayerY = player.Position.Y,
+                CurrentRoom = currentRoom,
                 MusicVolume = AudioManager.MusicVolume,
                 SfxVolume = AudioManager.SFXVolume
             };
@@ -462,6 +582,13 @@ namespace GameProject2.Screens
                 hud.CoinCount = data.CoinCount;
                 hud.CurrentHealth = data.CurrentHealth;
                 hud.MaxHealth = data.MaxHealth;
+
+                // Load the saved room if it's different from current
+                if (!string.IsNullOrEmpty(data.CurrentRoom) && data.CurrentRoom != currentRoom)
+                {
+                    LoadRoom(data.CurrentRoom);
+                }
+
                 player.SetX(data.PlayerX);
                 player.SetY(data.PlayerY);
                 AudioManager.MusicVolume = data.MusicVolume;
@@ -469,6 +596,112 @@ namespace GameProject2.Screens
 
                 System.Diagnostics.Debug.WriteLine("Game loaded!");
             }
+        }
+
+        private void LoadRoom(string roomName, string spawnPointName = null)
+        {
+            // Save current state before changing rooms
+            SaveGame();
+
+            // Clear current room entities
+            enemies.Clear();
+            vases.Clear();
+            coins.Clear();
+            collisionBoxes.Clear();
+
+            // Load new tilemap
+            string tmxPath = Path.Combine(_content.RootDirectory, "Rooms", $"{roomName}.tmx");
+            tilemap = TmxLoader.Load(tmxPath, _content);
+
+            // Extract collision rectangles and spawn objects from new room
+            float tilemapScale = 4f;
+            foreach (var objectLayer in tilemap.ObjectLayers)
+            {
+                if (objectLayer.Name == "Collision")
+                {
+                    foreach (var obj in objectLayer.Objects)
+                    {
+                        Rectangle collisionRect = new Rectangle(
+                            (int)(obj.X * tilemapScale),
+                            (int)(obj.Y * tilemapScale),
+                            (int)(obj.Width * tilemapScale),
+                            (int)(obj.Height * tilemapScale)
+                        );
+                        collisionBoxes.Add(collisionRect);
+                    }
+                }
+
+                // Spawn vases in new room
+                if (objectLayer.Name == "Objects")
+                {
+                    foreach (var obj in objectLayer.Objects)
+                    {
+                        if (obj.Class == "Vase")
+                        {
+                            Vector2 vasePos = new Vector2(obj.X * tilemapScale, obj.Y * tilemapScale);
+                            vases.Add(new Vase(vaseTexture, vasePos, 16, 8));
+                        }
+                        else if (obj.Class == "Trophy")
+                        {
+                            Vector2 trophyPos = new Vector2(obj.X * tilemapScale, obj.Y * tilemapScale);
+                            trophy = new Trophy(ScreenManager.GraphicsDevice, trophyPos);
+                        }
+                    }
+                }
+            }
+
+            // Position player at appropriate spawn point
+            bool foundSpawn = false;
+
+            // If spawnPointName is provided, look for that specific spawn
+            if (!string.IsNullOrEmpty(spawnPointName))
+            {
+                foreach (var objectLayer in tilemap.ObjectLayers)
+                {
+                    foreach (var obj in objectLayer.Objects)
+                    {
+                        if (obj.Class == "SpawnPoint" && obj.Name == spawnPointName)
+                        {
+                            player.SetX(obj.X * tilemapScale);
+                            player.SetY(obj.Y * tilemapScale);
+                            foundSpawn = true;
+                            break;
+                        }
+                    }
+                    if (foundSpawn) break;
+                }
+            }
+
+            // If no specific spawn found and this is initial load, look for InitialSpawn
+            if (!foundSpawn && lastRoomName == null)
+            {
+                foreach (var objectLayer in tilemap.ObjectLayers)
+                {
+                    foreach (var obj in objectLayer.Objects)
+                    {
+                        if (obj.Class == "SpawnPoint" && obj.Name == "InitialSpawn")
+                        {
+                            player.SetX(obj.X * tilemapScale);
+                            player.SetY(obj.Y * tilemapScale);
+                            foundSpawn = true;
+                            break;
+                        }
+                    }
+                    if (foundSpawn) break;
+                }
+            }
+
+            // If still no spawn point, place in center of room
+            if (!foundSpawn)
+            {
+                float centerX = (tilemap.Width * tilemap.TileWidth * tilemapScale) / 2f;
+                float centerY = (tilemap.Height * tilemap.TileHeight * tilemapScale) / 2f;
+                player.SetX(centerX);
+                player.SetY(centerY);
+            }
+
+            lastRoomName = currentRoom;
+            currentRoom = roomName;
         }
     }
 }

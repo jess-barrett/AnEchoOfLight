@@ -12,6 +12,7 @@ namespace GameProject2.SaveSystem
         public int MaxHealth { get; set; }
         public float PlayerX { get; set; }
         public float PlayerY { get; set; }
+        public string CurrentRoom { get; set; } = "StartingRoom";
         public float MusicVolume { get; set; }
         public float SfxVolume { get; set; }
 
