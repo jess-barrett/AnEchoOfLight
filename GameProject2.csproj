@@ -38,6 +38,9 @@
     <None Update="Content\Rooms\TrophyRoom.tmx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Content\Rooms\WormRoom.tmx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Content\Tilemaps\Dungeon_1.tsx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

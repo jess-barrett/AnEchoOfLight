@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="16" tileheight="16" infinite="0" nextlayerid="7" nextobjectid="23">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="16" tileheight="16" infinite="0" nextlayerid="7" nextobjectid="28">
  <tileset firstgid="1" source="../Tilemaps/Dungeon_1.tsx"/>
  <objectgroup id="4" name="Collision">
   <object id="3" x="35.2613" y="21.4246" width="17.8538"/>
@@ -114,6 +114,18 @@
    <properties>
     <property name="spawnPoint" value="FromRoom1"/>
    </properties>
+  </object>
+  <object id="24" type="Skull" x="47.3126" y="48.2053">
+   <point/>
+  </object>
+  <object id="25" type="Skull" x="298.159" y="238.349">
+   <point/>
+  </object>
+  <object id="26" type="Skull" x="383.411" y="52.6688">
+   <point/>
+  </object>
+  <object id="27" name="CP-StartingRoom" type="Checkpoint" x="55.3468" y="233.439">
+   <point/>
   </object>
  </objectgroup>
 </map>

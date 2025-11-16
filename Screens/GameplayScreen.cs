@@ -24,14 +24,28 @@ namespace GameProject2.Screens
 
         private Camera camera;
         private ParticleSystem particleSystem;
+        private Texture2D pixelTexture;
 
         private string currentRoom = "StartingRoom";
         private string lastRoomName = null;
 
+        private string lastCheckpointRoom = "StartingRoom";
+        private string lastCheckpointName = "CP-StartingRoom";
+        private bool showCheckpointMessage = false;
+        private float checkpointMessageTimer = 0f;
+        private float checkpointMessageDuration = 2f;
+
+        private bool showDemoMessage = false;
+        private float demoMessageTimer = 0f;
+        private float demoMessageDuration = 5f;
+
         private Texture2D vaseTexture;
+        private Dictionary<string, HashSet<string>> destroyedVasesPerRoom = new Dictionary<string, HashSet<string>>();
         private Texture2D coinTexture;
+        private Texture2D buttonTexture;
         private List<Vase> vases = new List<Vase>();
         private List<Coin> coins = new List<Coin>();
+        private List<Button> buttons = new List<Button>();
 
         private Trophy trophy;
         private bool showTrophyPrompt = false;
@@ -42,16 +56,24 @@ namespace GameProject2.Screens
 
         private Texture2D skullSheet;
         private List<Skull> enemies = new List<Skull>();
-        private float spawnTimer = 0f;
-        private float spawnInterval = 2f;
 
         private Tilemap tilemap;
 
         private List<Rectangle> collisionBoxes = new List<Rectangle>();
 
         private SpriteFont instructionFont;
-        private float instructionTimer = 5f;
+        private float instructionTimer = 8f;
         private string instructionText = "WASD to move | SHIFT to sprint | SPACE to attack";
+
+        private bool showButtonPrompt = false;
+        private Vector2 buttonPromptPosition;
+
+        private bool isDying = false;
+        private float deathFadeTimer = 0f;
+        private float deathFadeDuration = 3f;
+        private float deathFadeAlpha = 0f;
+        private Texture2D fadeTexture;
+
 
         public GameplayScreen()
         {
@@ -65,6 +87,9 @@ namespace GameProject2.Screens
                 _content = new ContentManager(ScreenManager.Game.Services, "Content");
 
             _spriteBatch = new SpriteBatch(ScreenManager.GraphicsDevice);
+
+            fadeTexture = new Texture2D(ScreenManager.GraphicsDevice, 1, 1);
+            fadeTexture.SetData(new[] { Color.Black });
 
             AudioManager.PlayGameplayMusicWithIntro();
 
@@ -128,6 +153,11 @@ namespace GameProject2.Screens
             var hurtLeft = _content.Load<Texture2D>("Player/Sprites/HURT/hurt_left");
             var hurtRight = _content.Load<Texture2D>("Player/Sprites/HURT/hurt_right");
 
+            var deathDown = _content.Load<Texture2D>("Player/Sprites/DEATH/death_down");
+            var deathUp = _content.Load<Texture2D>("Player/Sprites/DEATH/death_up");
+            var deathLeft = _content.Load<Texture2D>("Player/Sprites/DEATH/death_left");
+            var deathRight = _content.Load<Texture2D>("Player/Sprites/DEATH/death_right");
+
             List<SpriteAnimation[]> animations = new List<SpriteAnimation[]>();
 
             player.idleAnimations[0] = new SpriteAnimation(idleDown, 8, 8);
@@ -161,6 +191,12 @@ namespace GameProject2.Screens
             player.hurtAnimations[3] = new SpriteAnimation(hurtRight, 4, 8);
             animations.Add(player.hurtAnimations);
 
+            player.deathAnimations[0] = new SpriteAnimation(deathDown, 7, 7); // Adjust frame count based on your sprite sheets
+            player.deathAnimations[1] = new SpriteAnimation(deathUp, 7, 7);
+            player.deathAnimations[2] = new SpriteAnimation(deathLeft, 7, 7);
+            player.deathAnimations[3] = new SpriteAnimation(deathRight, 7, 7);
+            animations.Add(player.deathAnimations);
+
             player.Animation = player.idleAnimations[0];
 
             foreach (var animSet in animations)
@@ -176,6 +212,7 @@ namespace GameProject2.Screens
 
             vaseTexture = _content.Load<Texture2D>("Interactables/Vase");
             coinTexture = _content.Load<Texture2D>("Interactables/Coin");
+            buttonTexture = _content.Load<Texture2D>("Interactables/Button");
 
             foreach (var objectLayer in tilemap.ObjectLayers)
             {
@@ -186,7 +223,40 @@ namespace GameProject2.Screens
                         if (obj.Class == "Vase")
                         {
                             Vector2 vasePos = new Vector2(obj.X * tilemapScale, obj.Y * tilemapScale);
-                            vases.Add(new Vase(vaseTexture, vasePos, 16, 8));
+
+                            string vaseId = $"{obj.X}_{obj.Y}";
+
+                            if (!destroyedVasesPerRoom.ContainsKey(currentRoom))
+                            {
+                                destroyedVasesPerRoom[currentRoom] = new HashSet<string>();
+                            }
+
+                            if (!destroyedVasesPerRoom[currentRoom].Contains(vaseId))
+                            {
+                                Vase vase = new Vase(vaseTexture, vasePos, 16, 8);
+                                vase.VaseId = vaseId;
+                                vases.Add(vase);
+                                System.Diagnostics.Debug.WriteLine($"Initial spawn vase {vaseId} in room {currentRoom}");
+                            }
+                        }
+                        else if (obj.Class == "Skull")
+                        {
+                            Vector2 skullPos = new Vector2(obj.X * tilemapScale, obj.Y * tilemapScale);
+                            Skull skull = new Skull(skullSheet, 10, 10, skullPos); // Pass position directly
+                            enemies.Add(skull);
+                        }
+                        else if (obj.Class == "Button")
+                        {
+                            Vector2 buttonPos = new Vector2(obj.X * tilemapScale, obj.Y * tilemapScale);
+                            Button button = new Button(buttonTexture, buttonPos, 4f, obj.Name);
+
+                            if (obj.Name == lastCheckpointName && currentRoom == lastCheckpointRoom)
+                            {
+                                button.IsCurrentCheckpoint = true;
+                                button.Press();
+                            }
+
+                            buttons.Add(button);
                         }
                     }
                 }
@@ -242,22 +312,18 @@ namespace GameProject2.Screens
             if (instructionTimer > 0)
                 instructionTimer -= dt;
 
-            // spawn timer
-            if (currentRoom != "TrophyRoom")
+            if (showDemoMessage)
             {
-                spawnTimer += dt;
-                if (spawnTimer >= spawnInterval)
+                demoMessageTimer -= dt;
+                if (demoMessageTimer <= 0)
                 {
-                    spawnTimer = 0f;
-                    enemies.Add(new Skull(skullSheet, 10, 10,
-                        ScreenManager.GraphicsDevice.Viewport.Width,
-                        ScreenManager.GraphicsDevice.Viewport.Height));
+                    showDemoMessage = false;
                 }
             }
 
             // update all skulls
             foreach (var skull in enemies)
-                skull.Update(gameTime, player);
+                skull.Update(gameTime, player, collisionBoxes);
 
             // Check for collisions between player and skulls
             RotatedRectangle playerHitbox = player.RotatedHitbox;
@@ -266,13 +332,30 @@ namespace GameProject2.Screens
                 var skull = enemies[i];
                 if (playerHitbox.Intersects(skull.RotatedHitbox))
                 {
-                    if (player.State != PlayerState.Attack1 && player.State != PlayerState.Hurt)
+                    if (player.State != PlayerState.Attack1 && player.State != PlayerState.Hurt && player.State != PlayerState.Death)
                     {
-                        player.State = PlayerState.Hurt;
-                        player.Animation = player.hurtAnimations[(int)player.Direction];
-                        player.Animation.IsLooping = false;
-                        player.Animation.setFrame(0);
                         hud.TakeDamage();
+
+                        // Check if player died
+                        if (hud.CurrentHealth <= 0)
+                        {
+                            player.State = PlayerState.Death;
+                            player.Animation = player.deathAnimations[(int)player.Direction];
+                            player.Animation.IsLooping = false;
+                            player.Animation.setFrame(0);
+                            isDying = true;
+                            deathFadeTimer = 0f;
+                            AudioManager.PlayDeathSound(0.25f);
+                        }
+                        else
+                        {
+                            player.State = PlayerState.Hurt;
+                            player.Animation = player.hurtAnimations[(int)player.Direction];
+                            player.Animation.IsLooping = false;
+                            player.Animation.setFrame(0);
+                            AudioManager.PlayTakeDamageSound(0.5f);
+                        }
+
                         particleSystem.CreateSkullDeathEffect(skull.Position);
                         enemies.RemoveAt(i);
                     }
@@ -318,6 +401,13 @@ namespace GameProject2.Screens
                     {
                         vases[i].IsDestroyed = true;
                         coins.Add(new Coin(coinTexture, vases[i].Position, 8, 8));
+
+                        if (!destroyedVasesPerRoom.ContainsKey(currentRoom))
+                        {
+                            destroyedVasesPerRoom[currentRoom] = new HashSet<string>();
+                        }
+                        destroyedVasesPerRoom[currentRoom].Add(vases[i].VaseId);
+
                         vases.RemoveAt(i);
                     }
                 }
@@ -338,7 +428,66 @@ namespace GameProject2.Screens
             float tilemapScale = 4f;
             Rectangle currentPlayerHitbox = player.Hitbox;
 
+            // Update checkpoint message timer
+            if (showCheckpointMessage)
+            {
+                checkpointMessageTimer -= dt;
+                if (checkpointMessageTimer <= 0)
+                {
+                    showCheckpointMessage = false;
+                }
+            }
+
+            // Update buttons
+            foreach (var button in buttons)
+            {
+                button.Update(gameTime);
+            }
+
             KeyboardState currentKeyboardState = Keyboard.GetState();
+
+            showButtonPrompt = false;
+
+            // Check button interactions
+            foreach (var button in buttons)
+            {
+                if (currentPlayerHitbox.Intersects(button.Hitbox))
+                {
+                    // Show prompt if button not already pressed
+                    if (!button.IsPressed)
+                    {
+                        showButtonPrompt = true;
+                        buttonPromptPosition = new Vector2(button.Position.X, button.Position.Y - 50);
+                    }
+
+                    // Press button with E
+                    if (!button.IsPressed && currentKeyboardState.IsKeyDown(Keys.E) && previousKeyboardState.IsKeyUp(Keys.E))
+                    {
+                        // Press the button
+                        button.Press();
+
+                        // Reset all other buttons in this room
+                        foreach (var otherButton in buttons)
+                        {
+                            if (otherButton != button)
+                            {
+                                otherButton.Reset();
+                            }
+                        }
+
+                        // Mark this as the current checkpoint
+                        button.IsCurrentCheckpoint = true;
+                        lastCheckpointRoom = currentRoom;
+                        lastCheckpointName = button.CheckpointName;
+
+                        // Show message
+                        showCheckpointMessage = true;
+                        checkpointMessageTimer = checkpointMessageDuration;
+
+                        System.Diagnostics.Debug.WriteLine($"Checkpoint activated: {lastCheckpointName} in {lastCheckpointRoom}");
+                    }
+                }
+            }
 
             foreach (var objectLayer in tilemap.ObjectLayers)
             {
@@ -384,6 +533,37 @@ namespace GameProject2.Screens
                             }
                         }
                     }
+                    else if (obj.Class == "Checkpoint")
+                    {
+                        Rectangle checkpointRect = new Rectangle(
+                            (int)(obj.X * tilemapScale),
+                            (int)(obj.Y * tilemapScale),
+                            (int)(obj.Width * tilemapScale),
+                            (int)(obj.Height * tilemapScale)
+                        );
+
+                        if (currentPlayerHitbox.Intersects(checkpointRect))
+                        {
+                            lastCheckpointRoom = currentRoom;
+                            lastCheckpointName = obj.Name;
+                            System.Diagnostics.Debug.WriteLine($"Checkpoint saved: {lastCheckpointName} in {lastCheckpointRoom}");
+                        }
+                    }
+                    else if (obj.Class == "DemoTrigger")
+                    {
+                        Rectangle triggerRect = new Rectangle(
+                            (int)(obj.X * tilemapScale),
+                            (int)(obj.Y * tilemapScale),
+                            (int)(obj.Width * tilemapScale),
+                            (int)(obj.Height * tilemapScale)
+                        );
+
+                        if (currentPlayerHitbox.Intersects(triggerRect))
+                        {
+                            showDemoMessage = true;
+                            demoMessageTimer = demoMessageDuration;
+                        }
+                    }
                 }
             }
 
@@ -393,6 +573,23 @@ namespace GameProject2.Screens
 
             if (trophy != null)
                 trophy.Update(gameTime);
+
+            if (isDying)
+            {
+                deathFadeTimer += dt;
+                deathFadeAlpha = MathHelper.Clamp(deathFadeTimer / deathFadeDuration, 0f, 1f);
+
+                // When fade is complete, respawn player
+                if (deathFadeTimer >= deathFadeDuration)
+                {
+                    RespawnPlayer();
+                    isDying = false;
+                    deathFadeTimer = 0f;
+                    deathFadeAlpha = 0f;
+                }
+
+                return;
+            }
 
             // Update 3D view to match camera
             view3D = Matrix.CreateLookAt(
@@ -469,9 +666,18 @@ namespace GameProject2.Screens
                 );
             }
 
+            // Draw buttons
+            foreach (var button in buttons)
+            {
+                float yPosition = button.Position.Y;
+                float normalizedY = yPosition / 2000f;
+                float layerDepth = MathHelper.Clamp(0.9f - (normalizedY * 0.8f), 0.1f, 0.9f);
+                button.Draw(_spriteBatch, layerDepth);
+            }
+
             particleSystem.Draw(_spriteBatch, 0.05f);
 
-            // Draw trophy interaction prompt IN WORLD SPACE
+            // Draw trophy interaction prompt
             if (showTrophyPrompt)
             {
                 string promptText = "E";
@@ -481,6 +687,25 @@ namespace GameProject2.Screens
                     instructionFont,
                     promptText,
                     trophyPromptPosition,
+                    Color.White,
+                    0f,
+                    textSize / 2f,
+                    2f,
+                    SpriteEffects.None,
+                    0.01f
+                );
+            }
+
+            // Draw button interaction prompt
+            if (showButtonPrompt)
+            {
+                string promptText = "E";
+                Vector2 textSize = instructionFont.MeasureString(promptText);
+
+                _spriteBatch.DrawString(
+                    instructionFont,
+                    promptText,
+                    buttonPromptPosition,
                     Color.White,
                     0f,
                     textSize / 2f,
@@ -518,13 +743,129 @@ namespace GameProject2.Screens
                 );
             }
 
+            // Draw checkpoint saved message
+            if (showCheckpointMessage)
+            {
+                string message = "Checkpoint Saved";
+                Vector2 messageSize = instructionFont.MeasureString(message);
+                float scale = 2f;
+
+                // Calculate centered position accounting for scale
+                Vector2 messagePosition = new Vector2(
+                    (ScreenManager.GraphicsDevice.Viewport.Width - (messageSize.X * scale)) / 2,
+                    ScreenManager.GraphicsDevice.Viewport.Height / 2 - 100
+                );
+
+                // Draw with outline for visibility
+                Color outlineColor = Color.Black;
+                Color textColor = Color.White;
+
+                // Draw outline
+                for (int x = -1; x <= 1; x++)
+                {
+                    for (int y = -1; y <= 1; y++)
+                    {
+                        if (x != 0 || y != 0)
+                        {
+                            _spriteBatch.DrawString(
+                                instructionFont,
+                                message,
+                                messagePosition + new Vector2(x * 2, y * 2),
+                                outlineColor,
+                                0f,
+                                Vector2.Zero,
+                                scale,
+                                SpriteEffects.None,
+                                0f
+                            );
+                        }
+                    }
+                }
+
+                // Draw main text
+                _spriteBatch.DrawString(
+                    instructionFont,
+                    message,
+                    messagePosition,
+                    textColor,
+                    0f,
+                    Vector2.Zero,
+                    scale,
+                    SpriteEffects.None,
+                    0f
+                );
+            }
+
+            // Draw demo message (ADD THIS)
+            if (showDemoMessage)
+            {
+                string message = "Thanks For Playing The Demo";
+                Vector2 messageSize = instructionFont.MeasureString(message);
+                float scale = 2.5f;
+
+                // Calculate centered position accounting for scale
+                Vector2 messagePosition = new Vector2(
+                    (ScreenManager.GraphicsDevice.Viewport.Width - (messageSize.X * scale)) / 2,
+                    ScreenManager.GraphicsDevice.Viewport.Height / 2
+                );
+
+                // Draw with outline for visibility
+                Color outlineColor = Color.Black;
+                Color textColor = Color.Gold;
+
+                // Draw outline
+                for (int x = -1; x <= 1; x++)
+                {
+                    for (int y = -1; y <= 1; y++)
+                    {
+                        if (x != 0 || y != 0)
+                        {
+                            _spriteBatch.DrawString(
+                                instructionFont,
+                                message,
+                                messagePosition + new Vector2(x * 2, y * 2),
+                                outlineColor,
+                                0f,
+                                Vector2.Zero,
+                                scale,
+                                SpriteEffects.None,
+                                0f
+                            );
+                        }
+                    }
+                }
+
+                // Draw main text
+                _spriteBatch.DrawString(
+                    instructionFont,
+                    message,
+                    messagePosition,
+                    textColor,
+                    0f,
+                    Vector2.Zero,
+                    scale,
+                    SpriteEffects.None,
+                    0f
+                );
+            }
+
             // Draw HUD
             hud.Draw(_spriteBatch, ScreenManager.GraphicsDevice.Viewport);
 
+            // Draw death fade overlay
+            if (isDying && deathFadeAlpha > 0)
+            {
+                _spriteBatch.Draw(
+                    fadeTexture,
+                    new Rectangle(0, 0,
+                        ScreenManager.GraphicsDevice.Viewport.Width,
+                        ScreenManager.GraphicsDevice.Viewport.Height),
+                    Color.Black * deathFadeAlpha
+                );
+            }
+
             _spriteBatch.End();
         }
-
-        private Texture2D pixelTexture;
 
         private void DrawRotatedHitbox(SpriteBatch spriteBatch, RotatedRectangle rotRect, Color color)
         {
@@ -557,16 +898,23 @@ namespace GameProject2.Screens
 
         public void SaveGame()
         {
+            var destroyedVasesForSave = new Dictionary<string, List<string>>();
+            foreach (var kvp in destroyedVasesPerRoom)
+            {
+                destroyedVasesForSave[kvp.Key] = new List<string>(kvp.Value);
+            }
+
             SaveData data = new SaveData
             {
                 CoinCount = hud.CoinCount,
                 CurrentHealth = hud.CurrentHealth,
                 MaxHealth = hud.MaxHealth,
-                PlayerX = player.Position.X,
-                PlayerY = player.Position.Y,
+                CheckpointRoom = lastCheckpointRoom,
+                CheckpointName = lastCheckpointName,
                 CurrentRoom = currentRoom,
                 MusicVolume = AudioManager.MusicVolume,
-                SfxVolume = AudioManager.SFXVolume
+                SfxVolume = AudioManager.SFXVolume,
+                DestroyedVases = destroyedVasesForSave
             };
 
             SaveData.Save(data);
@@ -583,14 +931,25 @@ namespace GameProject2.Screens
                 hud.CurrentHealth = data.CurrentHealth;
                 hud.MaxHealth = data.MaxHealth;
 
-                // Load the saved room if it's different from current
-                if (!string.IsNullOrEmpty(data.CurrentRoom) && data.CurrentRoom != currentRoom)
+                lastCheckpointRoom = data.CheckpointRoom ?? "StartingRoom";
+                lastCheckpointName = data.CheckpointName ?? "InitialSpawn";
+
+                // Load destroyed vases
+                if (data.DestroyedVases != null)
                 {
-                    LoadRoom(data.CurrentRoom);
+                    destroyedVasesPerRoom.Clear();
+                    foreach (var kvp in data.DestroyedVases)
+                    {
+                        destroyedVasesPerRoom[kvp.Key] = new HashSet<string>(kvp.Value);
+                    }
                 }
 
-                player.SetX(data.PlayerX);
-                player.SetY(data.PlayerY);
+                // Always load the checkpoint room to ensure proper spawning
+                if (!string.IsNullOrEmpty(data.CheckpointRoom))
+                {
+                    LoadRoom(data.CheckpointRoom, data.CheckpointName);
+                }
+
                 AudioManager.MusicVolume = data.MusicVolume;
                 AudioManager.SFXVolume = data.SfxVolume;
 
@@ -601,12 +960,16 @@ namespace GameProject2.Screens
         private void LoadRoom(string roomName, string spawnPointName = null)
         {
             // Save current state before changing rooms
-            SaveGame();
+            if (!isDying)
+            {
+                SaveGame();
+            }
 
             // Clear current room entities
             enemies.Clear();
             vases.Clear();
             coins.Clear();
+            buttons.Clear();
             collisionBoxes.Clear();
 
             // Load new tilemap
@@ -631,7 +994,7 @@ namespace GameProject2.Screens
                     }
                 }
 
-                // Spawn vases in new room
+                // Spawn objects in new room
                 if (objectLayer.Name == "Objects")
                 {
                     foreach (var obj in objectLayer.Objects)
@@ -639,12 +1002,51 @@ namespace GameProject2.Screens
                         if (obj.Class == "Vase")
                         {
                             Vector2 vasePos = new Vector2(obj.X * tilemapScale, obj.Y * tilemapScale);
-                            vases.Add(new Vase(vaseTexture, vasePos, 16, 8));
+
+                            // Create unique ID for this vase (room + position)
+                            string vaseId = $"{obj.X}_{obj.Y}";
+
+                            // IMPORTANT: Use roomName (the room we're loading) not currentRoom (the old room)
+                            if (!destroyedVasesPerRoom.ContainsKey(roomName))
+                            {
+                                destroyedVasesPerRoom[roomName] = new HashSet<string>();
+                            }
+
+                            if (!destroyedVasesPerRoom[roomName].Contains(vaseId))
+                            {
+                                Vase vase = new Vase(vaseTexture, vasePos, 16, 8);
+                                vase.VaseId = vaseId;
+                                vases.Add(vase);
+                                System.Diagnostics.Debug.WriteLine($"Spawned vase {vaseId} in room {roomName}");
+                            }
+                            else
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Skipped destroyed vase {vaseId} in room {roomName}");
+                            }
                         }
                         else if (obj.Class == "Trophy")
                         {
                             Vector2 trophyPos = new Vector2(obj.X * tilemapScale, obj.Y * tilemapScale);
                             trophy = new Trophy(ScreenManager.GraphicsDevice, trophyPos);
+                        }
+                        else if (obj.Class == "Skull")
+                        {
+                            Vector2 skullPos = new Vector2(obj.X * tilemapScale, obj.Y * tilemapScale);
+                            Skull skull = new Skull(skullSheet, 10, 10, skullPos);
+                            enemies.Add(skull);
+                        }
+                        else if (obj.Class == "Button")
+                        {
+                            Vector2 buttonPos = new Vector2(obj.X * tilemapScale, obj.Y * tilemapScale);
+                            Button button = new Button(buttonTexture, buttonPos, 4f, obj.Name);
+
+                            if (obj.Name == lastCheckpointName && roomName == lastCheckpointRoom)
+                            {
+                                button.IsCurrentCheckpoint = true;
+                                button.Press();
+                            }
+
+                            buttons.Add(button);
                         }
                     }
                 }
@@ -653,14 +1055,15 @@ namespace GameProject2.Screens
             // Position player at appropriate spawn point
             bool foundSpawn = false;
 
-            // If spawnPointName is provided, look for that specific spawn
+            // If spawnPointName is provided, look for that specific spawn (could be Checkpoint or SpawnPoint)
             if (!string.IsNullOrEmpty(spawnPointName))
             {
                 foreach (var objectLayer in tilemap.ObjectLayers)
                 {
                     foreach (var obj in objectLayer.Objects)
                     {
-                        if (obj.Class == "SpawnPoint" && obj.Name == spawnPointName)
+                        // Check both Checkpoint and SpawnPoint classes
+                        if ((obj.Class == "SpawnPoint" || obj.Class == "Checkpoint") && obj.Name == spawnPointName)
                         {
                             player.SetX(obj.X * tilemapScale);
                             player.SetY(obj.Y * tilemapScale);
@@ -679,7 +1082,7 @@ namespace GameProject2.Screens
                 {
                     foreach (var obj in objectLayer.Objects)
                     {
-                        if (obj.Class == "SpawnPoint" && obj.Name == "InitialSpawn")
+                        if ((obj.Class == "SpawnPoint" || obj.Class == "Checkpoint") && obj.Name == "InitialSpawn")
                         {
                             player.SetX(obj.X * tilemapScale);
                             player.SetY(obj.Y * tilemapScale);
@@ -702,6 +1105,18 @@ namespace GameProject2.Screens
 
             lastRoomName = currentRoom;
             currentRoom = roomName;
+        }
+
+        private void RespawnPlayer()
+        {
+            player.State = PlayerState.Idle;
+            player.Animation = player.idleAnimations[(int)player.Direction];
+
+            hud.CurrentHealth = hud.MaxHealth;
+
+            LoadRoom(lastCheckpointRoom, lastCheckpointName);
+
+            System.Diagnostics.Debug.WriteLine($"Player respawned at {lastCheckpointName} in {lastCheckpointRoom}");
         }
     }
 }

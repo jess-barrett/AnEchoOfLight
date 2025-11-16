@@ -7,6 +7,7 @@ namespace GameProject2
     {
         public SpriteAnimation Animation;
         public Vector2 Position;
+        public string VaseId { get; set; }
         public bool IsDestroyed = false;
         private float scale = 4f;
 

@@ -11,6 +11,9 @@ namespace GameProject2
         private static SoundEffect menuIntro;
         private static SoundEffect gameplayIntro;
         private static SoundEffect footstepSound;
+        private static SoundEffect deathSound;
+        private static SoundEffect swingSwordSound;
+        private static SoundEffect takeDamageSound;
 
         private static SoundEffectInstance menuMusicInstance;
         private static SoundEffectInstance gameplayMusicInstance;
@@ -45,7 +48,10 @@ namespace GameProject2
             menuMusicEffect = content.Load<SoundEffect>("Sound/Venus");
             gameplayIntro = content.Load<SoundEffect>("Sound/BossIntro");
             gameplayMusicEffect = content.Load<SoundEffect>("Sound/BossMain");
-            footstepSound = content.Load<SoundEffect>("Sound/PlayerMovement/03_Step_Grass_03");
+            footstepSound = content.Load<SoundEffect>("Sound/PlayerMovement/03_Step_grass_03");
+            deathSound = content.Load<SoundEffect>("Sound/Death");
+            swingSwordSound = content.Load<SoundEffect>("Sound/SwingSword");
+            takeDamageSound = content.Load<SoundEffect>("Sound/TakeDamage");
 
             // Create looping instances for music
             menuMusicInstance = menuMusicEffect.CreateInstance();
@@ -124,6 +130,21 @@ namespace GameProject2
             {
                 footstepSound.Play(volume * sfxVolume, pitch, 0f);
             }
+        }
+
+        public static void PlayDeathSound(float volume = 1f, float pitch = 0.0f, float pan = 0.0f)
+        {
+            deathSound?.Play(volume * SFXVolume, pitch, pan);
+        }
+
+        public static void PlaySwingSwordSound(float volume = 1f, float pitch = 0.0f, float pan = 0.0f)
+        {
+            swingSwordSound?.Play(volume * SFXVolume, pitch, pan);
+        }
+
+        public static void PlayTakeDamageSound(float volume = 1f, float pitch = 0.0f, float pan = 0.0f)
+        {
+            takeDamageSound?.Play(volume * SFXVolume, pitch, pan);
         }
     }
 }

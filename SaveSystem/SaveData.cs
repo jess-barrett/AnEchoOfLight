@@ -1,7 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
-
 namespace GameProject2.SaveSystem
 {
     [Serializable]
@@ -10,11 +10,13 @@ namespace GameProject2.SaveSystem
         public int CoinCount { get; set; }
         public int CurrentHealth { get; set; }
         public int MaxHealth { get; set; }
-        public float PlayerX { get; set; }
-        public float PlayerY { get; set; }
+        public string CheckpointRoom { get; set; } = "StartingRoom";
+        public string CheckpointName { get; set; } = "InitialSpawn";
+
         public string CurrentRoom { get; set; } = "StartingRoom";
         public float MusicVolume { get; set; }
         public float SfxVolume { get; set; }
+        public Dictionary<string, List<string>> DestroyedVases { get; set; } = new Dictionary<string, List<string>>();
 
         public static void Save(SaveData data, string filename = "savegame.json")
         {
@@ -43,7 +45,6 @@ namespace GameProject2.SaveSystem
             {
                 System.Diagnostics.Debug.WriteLine($"Load failed: {ex.Message}");
             }
-
             return null;
         }
 

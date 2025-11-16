@@ -44,6 +44,7 @@ namespace GameProject2
         public SpriteAnimation[] attack1Animations = new SpriteAnimation[4];
         public SpriteAnimation[] attack2Animations = new SpriteAnimation[4];
         public SpriteAnimation[] hurtAnimations = new SpriteAnimation[4];
+        public SpriteAnimation[] deathAnimations = new SpriteAnimation[4];
 
         public Vector2 Position => position;
 
@@ -100,6 +101,21 @@ namespace GameProject2
         {
             KeyboardState kbState = Keyboard.GetState();
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // === DEATH LOGIC ===
+            if (State == PlayerState.Death)
+            {
+                Animation.Position = position;
+                Animation.Update(gameTime);
+
+                if (Animation.CurrentFrameIndex == Animation.FrameCount - 1)
+                {
+                    // Death animation complete - could trigger game over here
+                    // For now, just freeze on last frame
+                }
+
+                return;
+            }
 
             // === HURT LOGIC ===
             if (State == PlayerState.Hurt)
@@ -173,6 +189,7 @@ namespace GameProject2
                 Animation.IsLooping = false;
                 Animation.setFrame(0);
                 Animation.Position = position;
+                AudioManager.PlaySwingSwordSound(0.25f);
                 return;
             }
 
