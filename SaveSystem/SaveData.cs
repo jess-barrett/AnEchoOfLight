@@ -19,6 +19,13 @@ namespace GameProject2.SaveSystem
         public Dictionary<string, List<string>> DestroyedVases { get; set; } = new Dictionary<string, List<string>>();
         public Dictionary<string, List<string>> OpenedChests { get; set; } = new Dictionary<string, List<string>>();
 
+        // Ability unlocks
+        public bool HasAttack2 { get; set; } = false;
+        public bool HasDash { get; set; } = false;
+
+        // Activated totems
+        public List<string> ActivatedTotems { get; set; } = new List<string>();
+
         public static void Save(SaveData data, string filename = "savegame.json")
         {
             try

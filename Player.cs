@@ -43,8 +43,22 @@ namespace GameProject2
         public SpriteAnimation[] runAnimations = new SpriteAnimation[4];
         public SpriteAnimation[] attack1Animations = new SpriteAnimation[4];
         public SpriteAnimation[] attack2Animations = new SpriteAnimation[4];
+        public SpriteAnimation[] dashAnimations = new SpriteAnimation[4];
+        public SpriteAnimation[] healAnimations = new SpriteAnimation[4];
         public SpriteAnimation[] hurtAnimations = new SpriteAnimation[4];
         public SpriteAnimation[] deathAnimations = new SpriteAnimation[4];
+
+        // Ability unlock flags
+        public bool HasAttack2 { get; set; } = false;
+        public bool HasDash { get; set; } = false;
+
+        // Dash state
+        private float dashSpeed = 800f;
+        private float dashDuration = 0.4f;
+        private float dashTimer = 0f;
+        private Vector2 dashDirection;
+        private float dashCooldown = 1f;
+        private float dashCooldownTimer = 0f;
 
         public Vector2 Position => position;
 
@@ -97,10 +111,27 @@ namespace GameProject2
         public void SetX(float newX) => position.X = newX;
         public void SetY(float newY) => position.Y = newY;
 
+        // Trigger heal animation (called when player uses a potion)
+        public void TriggerHealAnimation()
+        {
+            if (State != PlayerState.Death && State != PlayerState.Hurt)
+            {
+                State = PlayerState.Heal;
+                Animation = healAnimations[(int)Direction];
+                Animation.IsLooping = false;
+                Animation.setFrame(0);
+                Animation.Position = position;
+            }
+        }
+
         public void Update(GameTime gameTime, List<Skull> skulls, ParticleSystem particleSystem, List<Rectangle> collisionBoxes)
         {
             KeyboardState kbState = Keyboard.GetState();
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // Update dash cooldown
+            if (dashCooldownTimer > 0)
+                dashCooldownTimer -= dt;
 
             // === DEATH LOGIC ===
             if (State == PlayerState.Death)
@@ -133,7 +164,69 @@ namespace GameProject2
                 return;
             }
 
-            // === ATTACK LOGIC ===
+            // === HEAL LOGIC ===
+            if (State == PlayerState.Heal)
+            {
+                Animation.Position = position;
+                Animation.Update(gameTime);
+
+                // End heal state when animation finishes
+                if (Animation.CurrentFrameIndex == Animation.FrameCount - 1)
+                {
+                    State = PlayerState.Idle;
+                }
+
+                // Freeze movement while healing
+                return;
+            }
+
+            // === DASH LOGIC ===
+            if (State == PlayerState.Dash)
+            {
+                dashTimer -= dt;
+
+                if (dashTimer > 0)
+                {
+                    // Move in dash direction
+                    Vector2 newPosition = position + dashDirection * dashSpeed * dt;
+
+                    Rectangle newHitbox = new Rectangle(
+                        (int)(newPosition.X - 24),
+                        (int)(newPosition.Y - 56),
+                        48,
+                        112
+                    );
+
+                    bool collided = false;
+                    foreach (var wall in collisionBoxes)
+                    {
+                        if (newHitbox.Intersects(wall))
+                        {
+                            collided = true;
+                            break;
+                        }
+                    }
+
+                    if (!collided)
+                    {
+                        position = newPosition;
+                    }
+                }
+
+                Animation.Position = position;
+                Animation.Update(gameTime);
+
+                // End dash when timer expires
+                if (dashTimer <= 0)
+                {
+                    State = PlayerState.Idle;
+                    dashCooldownTimer = dashCooldown;
+                }
+
+                return;
+            }
+
+            // === ATTACK1 LOGIC ===
             if (State == PlayerState.Attack1)
             {
                 Animation.Update(gameTime);
@@ -173,6 +266,47 @@ namespace GameProject2
                 return;
             }
 
+            // === ATTACK2 LOGIC ===
+            if (State == PlayerState.Attack2)
+            {
+                Animation.Update(gameTime);
+
+                int attackStartFrame = 2;
+                int attackEndFrame = 5;
+
+                if (Animation.CurrentFrameIndex >= attackStartFrame && Animation.CurrentFrameIndex <= attackEndFrame)
+                {
+                    // Attack2 has wider range
+                    Rectangle attackHitbox = Hitbox;
+                    int verticalRange = 60;
+                    int horizontalRange = 140;
+                    switch (Direction)
+                    {
+                        case Direction.Up: attackHitbox.Y -= verticalRange; break;
+                        case Direction.Down: attackHitbox.Y += verticalRange; break;
+                        case Direction.Left: attackHitbox.X -= horizontalRange; break;
+                        case Direction.Right: attackHitbox.X += horizontalRange; break;
+                    }
+
+                    foreach (var skull in skulls.ToArray())
+                    {
+                        if (attackHitbox.Intersects(skull.Hitbox))
+                        {
+                            particleSystem.CreateSkullDeathEffect(skull.Position);
+                            skulls.Remove(skull);
+                        }
+                    }
+                }
+
+                // End attack when animation finishes
+                if (Animation.CurrentFrameIndex == Animation.FrameCount - 1)
+                {
+                    State = PlayerState.Idle;
+                }
+
+                return;
+            }
+
             // === MOVEMENT INPUT ===
             isMoving = false;
 
@@ -181,8 +315,9 @@ namespace GameProject2
             if (kbState.IsKeyDown(Keys.W)) { Direction = Direction.Up; isMoving = true; }
             if (kbState.IsKeyDown(Keys.S)) { Direction = Direction.Down; isMoving = true; }
 
-            // === ATTACK TRIGGER ===
-            if (kbState.IsKeyDown(Keys.Space))
+            // === ATTACK1 TRIGGER (Left Click) ===
+            MouseState mouseState = Mouse.GetState();
+            if (mouseState.LeftButton == ButtonState.Pressed)
             {
                 State = PlayerState.Attack1;
                 Animation = attack1Animations[(int)Direction];
@@ -190,6 +325,40 @@ namespace GameProject2
                 Animation.setFrame(0);
                 Animation.Position = position;
                 AudioManager.PlaySwingSwordSound(0.25f);
+                return;
+            }
+
+            // === ATTACK2 TRIGGER (Right Click) - requires unlock ===
+            if (HasAttack2 && mouseState.RightButton == ButtonState.Pressed)
+            {
+                State = PlayerState.Attack2;
+                Animation = attack2Animations[(int)Direction];
+                Animation.IsLooping = false;
+                Animation.setFrame(0);
+                Animation.Position = position;
+                AudioManager.PlaySwingSwordSound(0.35f);
+                return;
+            }
+
+            // === DASH TRIGGER (Space) - requires unlock ===
+            if (HasDash && kbState.IsKeyDown(Keys.Space) && dashCooldownTimer <= 0)
+            {
+                State = PlayerState.Dash;
+                Animation = dashAnimations[(int)Direction];
+                Animation.IsLooping = false;
+                Animation.setFrame(0);
+                Animation.Position = position;
+                dashTimer = dashDuration;
+
+                // Set dash direction based on current direction
+                switch (Direction)
+                {
+                    case Direction.Up: dashDirection = new Vector2(0, -1); break;
+                    case Direction.Down: dashDirection = new Vector2(0, 1); break;
+                    case Direction.Left: dashDirection = new Vector2(-1, 0); break;
+                    case Direction.Right: dashDirection = new Vector2(1, 0); break;
+                }
+
                 return;
             }
 

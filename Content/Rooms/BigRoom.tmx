@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="29" height="30" tilewidth="16" tileheight="16" infinite="0" nextlayerid="6" nextobjectid="25">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="29" height="30" tilewidth="16" tileheight="16" infinite="0" nextlayerid="6" nextobjectid="26">
  <tileset firstgid="1" source="../Tilemaps/Dungeon_1.tsx"/>
  <tileset firstgid="561" source="../Tilemaps/Water.tsx"/>
  <tileset firstgid="649" source="../Tilemaps/AllTile.tsx"/>
@@ -12,6 +12,7 @@
   <object id="20" type="Wall" x="272.842" y="252.912" width="192" height="20.7719"/>
   <object id="21" type="Wall" x="193.123" y="272.842" width="14.5965" height="206.596"/>
   <object id="22" type="Wall" x="256.561" y="272.842" width="14.5965" height="206.596"/>
+  <object id="25" type="Wall" x="225.123" y="224" width="14.0351"/>
  </objectgroup>
  <layer id="1" name="Walls &amp; Floor" width="29" height="30">
   <data encoding="csv">
@@ -129,13 +130,13 @@
    <point/>
   </object>
   <object id="8" name="WormRoom" type="Door" x="459.789" y="207.719" width="3.36842" height="47.7193"/>
-  <object id="9" type="Door" x="0.561404" y="207.719" width="4.49123" height="47.7193"/>
-  <object id="10" type="Door" x="207.158" y="7.85965" width="48.8421" height="3.36842"/>
-  <object id="11" type="Door" x="207.158" y="477.754" width="49.4035" height="1.68421"/>
+  <object id="9" type="Wall" x="0.561404" y="207.719" width="4.49123" height="47.7193"/>
+  <object id="10" type="Wall" x="207.158" y="7.85965" width="48.8421" height="3.36842"/>
+  <object id="11" name="DashRoom" type="Door" x="207.158" y="477.754" width="49.4035" height="1.68421"/>
   <object id="12" name="From" type="SpawnPoint" x="232.421" y="54.4561">
    <point/>
   </object>
-  <object id="13" name="From" type="SpawnPoint" x="232.421" y="454.737">
+  <object id="13" name="FromDashRoom" type="SpawnPoint" x="232.421" y="454.737">
    <point/>
   </object>
   <object id="14" name="From" type="SpawnPoint" x="26.386" y="241.965">

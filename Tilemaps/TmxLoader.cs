@@ -37,7 +37,7 @@ namespace GameProject2.Tilemaps
                     XDocument tilesetDoc = XDocument.Load(tilesetPath);
                     ProcessTileset(tilesetDoc.Element("tileset"), tilemap, content, Path.GetDirectoryName(tilesetPath), firstGid);
                 }
-                else
+                else 
                 {
                     ProcessTileset(tilesetElement, tilemap, content, Path.GetDirectoryName(tmxFilePath), firstGid);
                 }

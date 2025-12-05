@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"C:\\CIS580\\GameProjects\\GameProject2\" /s /b /ad)",
+      "Bash(dotnet build:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
