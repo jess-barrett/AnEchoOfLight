@@ -1,4 +1,5 @@
 ﻿using Comora;
+using GameProject2.Content.Player;
 using GameProject2.Graphics3D;
 using GameProject2.SaveSystem;
 using GameProject2.StateManagement;
@@ -46,6 +47,21 @@ namespace GameProject2.Screens
         private List<Vase> vases = new List<Vase>();
         private List<Coin> coins = new List<Coin>();
         private List<Button> buttons = new List<Button>();
+
+        private Texture2D torchTilesetTexture;
+        private List<PillarTorch> pillarTorches = new List<PillarTorch>();
+
+        private Texture2D potionTexture;
+        private List<Potion> potions = new List<Potion>();
+
+        private Texture2D chestTexture;
+        private List<Chest> chests = new List<Chest>();
+        private Dictionary<string, HashSet<string>> openedChestsPerRoom = new Dictionary<string, HashSet<string>>();
+
+        // For spawning items from chests
+        private bool spawnItemsNextFrame = false;
+        private List<string> itemsToSpawn = new List<string>();
+        private Vector2 spawnPosition;
 
         private Trophy trophy;
         private bool showTrophyPrompt = false;
@@ -124,6 +140,8 @@ namespace GameProject2.Screens
             particleSystem = new ParticleSystem(ScreenManager.GraphicsDevice);
 
             instructionFont = _content.Load<SpriteFont>("InstructionFont");
+
+            torchTilesetTexture = _content.Load<Texture2D>("Tilemaps/Set 4.8");
 
             skullSheet = _content.Load<Texture2D>("skull");
 
@@ -213,6 +231,8 @@ namespace GameProject2.Screens
             vaseTexture = _content.Load<Texture2D>("Interactables/Vase");
             coinTexture = _content.Load<Texture2D>("Interactables/Coin");
             buttonTexture = _content.Load<Texture2D>("Interactables/Button");
+            potionTexture = _content.Load<Texture2D>("Interactables/Set 2.4");
+            chestTexture = _content.Load<Texture2D>("Interactables/Chest");
 
             foreach (var objectLayer in tilemap.ObjectLayers)
             {
@@ -248,7 +268,7 @@ namespace GameProject2.Screens
                         else if (obj.Class == "Button")
                         {
                             Vector2 buttonPos = new Vector2(obj.X * tilemapScale, obj.Y * tilemapScale);
-                            Button button = new Button(buttonTexture, buttonPos, 4f, obj.Name);
+                            Button button = new Button(buttonTexture, buttonPos, 2f, obj.Name);
 
                             if (obj.Name == lastCheckpointName && currentRoom == lastCheckpointRoom)
                             {
@@ -257,6 +277,68 @@ namespace GameProject2.Screens
                             }
 
                             buttons.Add(button);
+                        }
+                        else if (obj.Class == "PillarTorch")
+                        {
+                            Vector2 torchPos = new Vector2(obj.X * tilemapScale, obj.Y * tilemapScale);
+                            PillarTorch torch = new PillarTorch(torchTilesetTexture, torchPos, tilemapScale);
+                            pillarTorches.Add(torch);
+                        }
+                        else if (obj.Class == "Potion")
+                        {
+                            Vector2 potionPos = new Vector2(obj.X * tilemapScale, obj.Y * tilemapScale);
+
+                            string potionTypeStr = obj.Name ?? "RedMini";
+
+                            if (System.Enum.TryParse(potionTypeStr, out PotionType potionType))
+                            {
+                                Potion potion = new Potion(potionTexture, potionPos, potionType, 3f, true);
+                                potions.Add(potion);
+                            }
+                        }
+                        else if (obj.Class == "Chest")
+                        {
+                            Vector2 chestPos = new Vector2(obj.X * tilemapScale, obj.Y * tilemapScale);
+
+                            string chestId = $"{obj.X}_{obj.Y}";
+
+                            System.Diagnostics.Debug.WriteLine($"Loading chest at {chestPos}, Properties count: {obj.Properties.Count}");
+
+                            List<string> items = new List<string>();
+                            foreach (var prop in obj.Properties)
+                            {
+                                string itemType = prop.Key;
+                                string itemValue = prop.Value;
+
+                                System.Diagnostics.Debug.WriteLine($"  Property: {itemType} = {itemValue}");
+
+                                if (itemType == "Potion")
+                                {
+                                    items.Add($"Potion.{itemValue}");
+                                    System.Diagnostics.Debug.WriteLine($"  Added item: Potion.{itemValue}");
+                                }
+                                else if (itemType == "Coin")
+                                {
+                                    items.Add("Coin");
+                                    System.Diagnostics.Debug.WriteLine($"  Added item: Coin");
+                                }
+                            }
+
+                            System.Diagnostics.Debug.WriteLine($"Chest created with {items.Count} items");
+
+                            Chest chest = new Chest(chestTexture, chestPos, 4f, items, chestId);
+
+                            if (!openedChestsPerRoom.ContainsKey(currentRoom))
+                            {
+                                openedChestsPerRoom[currentRoom] = new HashSet<string>();
+                            }
+
+                            if (openedChestsPerRoom[currentRoom].Contains(chestId))
+                            {
+                                chest.SetOpened();
+                            }
+
+                            chests.Add(chest);
                         }
                     }
                 }
@@ -370,6 +452,25 @@ namespace GameProject2.Screens
             foreach (var coin in coins)
                 coin.Update(gameTime);
 
+            foreach (var torch in pillarTorches)
+                torch.Update(gameTime);
+
+            // Update potions
+            foreach (var potion in potions)
+                potion.Update(gameTime);
+
+            // Update chests
+            foreach (var chest in chests)
+                chest.Update(gameTime);
+
+            // Handle spawning items from opened chests
+            if (spawnItemsNextFrame)
+            {
+                SpawnItemsFromChest(itemsToSpawn, spawnPosition);
+                spawnItemsNextFrame = false;
+                itemsToSpawn.Clear();
+            }
+
             // Check player hitting vases
             if (player.State == PlayerState.Attack1)
             {
@@ -400,8 +501,9 @@ namespace GameProject2.Screens
                     if (!vases[i].IsDestroyed && attackHitbox.Intersects(vases[i].Hitbox))
                     {
                         vases[i].IsDestroyed = true;
-                        coins.Add(new Coin(coinTexture, vases[i].Position, 8, 8));
+                        coins.Add(new Coin(coinTexture, vases[i].Position, 8, 8, false));
 
+                        // Mark vase as destroyed
                         if (!destroyedVasesPerRoom.ContainsKey(currentRoom))
                         {
                             destroyedVasesPerRoom[currentRoom] = new HashSet<string>();
@@ -413,14 +515,64 @@ namespace GameProject2.Screens
                 }
             }
 
+            KeyboardState currentKeyboardState = Keyboard.GetState();
+
+            showButtonPrompt = false;
+
             // Check player collecting coins
             for (int i = coins.Count - 1; i >= 0; i--)
             {
                 if (player.Hitbox.Intersects(coins[i].Hitbox))
                 {
-                    coins[i].IsCollected = true;
-                    hud.AddCoin();
-                    coins.RemoveAt(i);
+                    // If coin requires interaction, show prompt and wait for E
+                    if (coins[i].RequiresInteraction)
+                    {
+                        showButtonPrompt = true;
+                        buttonPromptPosition = new Vector2(coins[i].Position.X, coins[i].Position.Y - 30);
+
+                        if (currentKeyboardState.IsKeyDown(Keys.E) && previousKeyboardState.IsKeyUp(Keys.E))
+                        {
+                            coins[i].IsCollected = true;
+                            hud.AddCoin();
+                            coins.RemoveAt(i);
+                        }
+                    }
+                    else
+                    {
+                        // Auto-collect coins from vases
+                        coins[i].IsCollected = true;
+                        hud.AddCoin();
+                        coins.RemoveAt(i);
+                    }
+                }
+            }
+
+            // Check player collecting potions
+            for (int i = potions.Count - 1; i >= 0; i--)
+            {
+                if (player.Hitbox.Intersects(potions[i].Hitbox))
+                {
+                    if (potions[i].RequiresInteraction)
+                    {
+                        showButtonPrompt = true;
+                        buttonPromptPosition = new Vector2(potions[i].Position.X, potions[i].Position.Y - 30);
+
+                        if (currentKeyboardState.IsKeyDown(Keys.E) && previousKeyboardState.IsKeyUp(Keys.E))
+                        {
+                            potions[i].IsCollected = true;
+                            potions[i].ApplyEffect(hud);
+                            potions.RemoveAt(i);
+                            previousKeyboardState = currentKeyboardState;
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        // Auto-collect potions that don't require interaction
+                        potions[i].IsCollected = true;
+                        potions[i].ApplyEffect(hud);
+                        potions.RemoveAt(i);
+                    }
                 }
             }
 
@@ -444,9 +596,7 @@ namespace GameProject2.Screens
                 button.Update(gameTime);
             }
 
-            KeyboardState currentKeyboardState = Keyboard.GetState();
-
-            showButtonPrompt = false;
+            currentKeyboardState = Keyboard.GetState();
 
             // Check button interactions
             foreach (var button in buttons)
@@ -485,6 +635,47 @@ namespace GameProject2.Screens
                         checkpointMessageTimer = checkpointMessageDuration;
 
                         System.Diagnostics.Debug.WriteLine($"Checkpoint activated: {lastCheckpointName} in {lastCheckpointRoom}");
+                    }
+                }
+            }
+
+            // Check chest interactions
+            foreach (var chest in chests)
+            {
+                if (currentPlayerHitbox.Intersects(chest.Hitbox))
+                {
+                    // Show prompt if chest not opened
+                    if (chest.State == ChestState.Closed)
+                    {
+                        showButtonPrompt = true;
+                        buttonPromptPosition = new Vector2(chest.Position.X, chest.Position.Y - 50);
+                    }
+
+                    // Open chest with E
+                    if (chest.State == ChestState.Closed && currentKeyboardState.IsKeyDown(Keys.E) && previousKeyboardState.IsKeyUp(Keys.E))
+                    {
+                        chest.Open();
+
+                        // Mark chest as opened in this room
+                        if (!openedChestsPerRoom.ContainsKey(currentRoom))
+                        {
+                            openedChestsPerRoom[currentRoom] = new HashSet<string>();
+                        }
+                        openedChestsPerRoom[currentRoom].Add(chest.ChestId);
+
+                        // Debug: Check what items are in the chest
+                        System.Diagnostics.Debug.WriteLine($"Opening chest with {chest.Items.Count} items:");
+                        foreach (var item in chest.Items)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"  - {item}");
+                        }
+
+                        // Schedule items to spawn next frame (after chest animation starts)
+                        spawnItemsNextFrame = true;
+                        itemsToSpawn = new List<string>(chest.Items);
+                        spawnPosition = chest.Position;
+
+                        System.Diagnostics.Debug.WriteLine($"Scheduled to spawn items at position {spawnPosition}");
                     }
                 }
             }
@@ -546,22 +737,6 @@ namespace GameProject2.Screens
                         {
                             lastCheckpointRoom = currentRoom;
                             lastCheckpointName = obj.Name;
-                            System.Diagnostics.Debug.WriteLine($"Checkpoint saved: {lastCheckpointName} in {lastCheckpointRoom}");
-                        }
-                    }
-                    else if (obj.Class == "DemoTrigger")
-                    {
-                        Rectangle triggerRect = new Rectangle(
-                            (int)(obj.X * tilemapScale),
-                            (int)(obj.Y * tilemapScale),
-                            (int)(obj.Width * tilemapScale),
-                            (int)(obj.Height * tilemapScale)
-                        );
-
-                        if (currentPlayerHitbox.Intersects(triggerRect))
-                        {
-                            showDemoMessage = true;
-                            demoMessageTimer = demoMessageDuration;
                         }
                     }
                 }
@@ -626,22 +801,29 @@ namespace GameProject2.Screens
                 RasterizerState.CullNone
             );
 
-            // Draw tilemap layers
+            // Draw ONLY the floor/ground layers first
             float baseDepth = 0.99f;
             float depthStep = 0.01f;
+
+            // Draw layers that should be BEHIND entities
             for (int i = 0; i < tilemap.Layers.Count; i++)
             {
-                float layerDepth = baseDepth - (i * depthStep);
-                TilemapRenderer.DrawLayer(_spriteBatch, tilemap, tilemap.Layers[i], layerDepth, 4f);
+                var layer = tilemap.Layers[i];
+
+                // Only draw floor/wall layers behind everything
+                if (layer.Name == "Walls & Floor" || layer.Name.Contains("Floor"))
+                {
+                    float layerDepth = baseDepth - (i * depthStep);
+                    TilemapRenderer.DrawLayer(_spriteBatch, tilemap, layer, layerDepth, 4f);
+                }
             }
 
-            // Build and draw sprite list
+            // Build and draw sprite list (player, enemies, vases, coins)
             var drawList = new List<SpriteAnimation>();
             if (player.Animation != null)
                 drawList.Add(player.Animation);
             drawList.AddRange(enemies.Select(e => e.Animation));
             drawList.AddRange(vases.Select(v => v.Animation));
-            drawList.AddRange(coins.Select(c => c.Animation));
 
             drawList = drawList
                 .OrderBy(anim => anim.Position.Y + anim.FrameHeight / 2f)
@@ -669,10 +851,61 @@ namespace GameProject2.Screens
             // Draw buttons
             foreach (var button in buttons)
             {
-                float yPosition = button.Position.Y;
+                float layerDepth = 0.95f;
+                button.Draw(_spriteBatch, layerDepth);
+            }
+
+            // Draw potions
+            foreach (var potion in potions)
+            {
+                float yPosition = potion.Position.Y;
                 float normalizedY = yPosition / 2000f;
                 float layerDepth = MathHelper.Clamp(0.9f - (normalizedY * 0.8f), 0.1f, 0.9f);
-                button.Draw(_spriteBatch, layerDepth);
+                potion.Draw(_spriteBatch, layerDepth);
+            }
+
+            // Draw pillar torches
+            foreach (var torch in pillarTorches)
+            {
+                // The torch is 3 tiles tall (48 pixels at scale 1, or 48*4 = 192 at scale 4)
+                float torchHeight = 16 * 2 * 4f; // 3 tiles * 16 pixels * scale 4
+                float yPosition = torch.Position.Y + torchHeight; // Bottom of torch
+                float normalizedY = yPosition / 2000f;
+                float layerDepth = MathHelper.Clamp(0.9f - (normalizedY * 0.8f), 0.1f, 0.9f);
+                torch.Draw(_spriteBatch, layerDepth);
+            }
+
+            // Draw chests
+            foreach (var chest in chests)
+            {
+                float yPosition = chest.Position.Y;
+                float normalizedY = yPosition / 2000f;
+                float layerDepth = MathHelper.Clamp(0.9f - (normalizedY * 0.8f), 0.1f, 0.9f);
+                chest.Draw(_spriteBatch, layerDepth);
+            }
+
+            // Draw layers that should be ABOVE entities with Y-based depth sorting
+            for (int i = 0; i < tilemap.Layers.Count; i++)
+            {
+                var layer = tilemap.Layers[i];
+
+                // Draw decoration layers that need depth sorting
+                if (layer.Name == "W&F Decor" || layer.Name.Contains("Decor") || layer.Name.Contains("Above"))
+                {
+                    DrawLayerWithDepthSorting(_spriteBatch, tilemap, layer, 4f);
+                }
+            }
+
+            // Draw other overlay layers (like waterfall) on top of everything
+            for (int i = 0; i < tilemap.Layers.Count; i++)
+            {
+                var layer = tilemap.Layers[i];
+
+                if (layer.Name == "Waterfall" || layer.Name.Contains("Overlay"))
+                {
+                    float layerDepth = 0.05f; // Very front
+                    TilemapRenderer.DrawLayer(_spriteBatch, tilemap, layer, layerDepth, 4f);
+                }
             }
 
             particleSystem.Draw(_spriteBatch, 0.05f);
@@ -701,15 +934,46 @@ namespace GameProject2.Screens
             {
                 string promptText = "E";
                 Vector2 textSize = instructionFont.MeasureString(promptText);
+                float promptScale = 1f;
 
+                // Center the text above the item, moved higher
+                Vector2 promptPosition = new Vector2(
+                    buttonPromptPosition.X - (textSize.X * promptScale) / 2f,
+                    buttonPromptPosition.Y - (textSize.Y * promptScale) / 2f - 10f // Added -20f to move it higher
+                );
+
+                // Draw thicker black outline
+                Color outlineColor = Color.Black;
+                for (int x = -2; x <= 2; x++) // Changed from -1 to 1, to -2 to 2 for thicker outline
+                {
+                    for (int y = -2; y <= 2; y++)
+                    {
+                        if (x != 0 || y != 0)
+                        {
+                            _spriteBatch.DrawString(
+                                instructionFont,
+                                promptText,
+                                promptPosition + new Vector2(x, y),
+                                outlineColor,
+                                0f,
+                                Vector2.Zero,
+                                promptScale,
+                                SpriteEffects.None,
+                                0.01f
+                            );
+                        }
+                    }
+                }
+
+                // Draw main white text
                 _spriteBatch.DrawString(
                     instructionFont,
                     promptText,
-                    buttonPromptPosition,
+                    promptPosition,
                     Color.White,
                     0f,
-                    textSize / 2f,
-                    2f,
+                    Vector2.Zero,
+                    promptScale,
                     SpriteEffects.None,
                     0.01f
                 );
@@ -759,59 +1023,6 @@ namespace GameProject2.Screens
                 // Draw with outline for visibility
                 Color outlineColor = Color.Black;
                 Color textColor = Color.White;
-
-                // Draw outline
-                for (int x = -1; x <= 1; x++)
-                {
-                    for (int y = -1; y <= 1; y++)
-                    {
-                        if (x != 0 || y != 0)
-                        {
-                            _spriteBatch.DrawString(
-                                instructionFont,
-                                message,
-                                messagePosition + new Vector2(x * 2, y * 2),
-                                outlineColor,
-                                0f,
-                                Vector2.Zero,
-                                scale,
-                                SpriteEffects.None,
-                                0f
-                            );
-                        }
-                    }
-                }
-
-                // Draw main text
-                _spriteBatch.DrawString(
-                    instructionFont,
-                    message,
-                    messagePosition,
-                    textColor,
-                    0f,
-                    Vector2.Zero,
-                    scale,
-                    SpriteEffects.None,
-                    0f
-                );
-            }
-
-            // Draw demo message (ADD THIS)
-            if (showDemoMessage)
-            {
-                string message = "Thanks For Playing The Demo";
-                Vector2 messageSize = instructionFont.MeasureString(message);
-                float scale = 2.5f;
-
-                // Calculate centered position accounting for scale
-                Vector2 messagePosition = new Vector2(
-                    (ScreenManager.GraphicsDevice.Viewport.Width - (messageSize.X * scale)) / 2,
-                    ScreenManager.GraphicsDevice.Viewport.Height / 2
-                );
-
-                // Draw with outline for visibility
-                Color outlineColor = Color.Black;
-                Color textColor = Color.Gold;
 
                 // Draw outline
                 for (int x = -1; x <= 1; x++)
@@ -904,6 +1115,12 @@ namespace GameProject2.Screens
                 destroyedVasesForSave[kvp.Key] = new List<string>(kvp.Value);
             }
 
+            var openedChestsForSave = new Dictionary<string, List<string>>();
+            foreach (var kvp in openedChestsPerRoom)
+            {
+                openedChestsForSave[kvp.Key] = new List<string>(kvp.Value);
+            }
+
             SaveData data = new SaveData
             {
                 CoinCount = hud.CoinCount,
@@ -914,7 +1131,8 @@ namespace GameProject2.Screens
                 CurrentRoom = currentRoom,
                 MusicVolume = AudioManager.MusicVolume,
                 SfxVolume = AudioManager.SFXVolume,
-                DestroyedVases = destroyedVasesForSave
+                DestroyedVases = destroyedVasesForSave,
+                OpenedChests = openedChestsForSave
             };
 
             SaveData.Save(data);
@@ -944,6 +1162,16 @@ namespace GameProject2.Screens
                     }
                 }
 
+                // Load opened chests
+                if (data.OpenedChests != null)
+                {
+                    openedChestsPerRoom.Clear();
+                    foreach (var kvp in data.OpenedChests)
+                    {
+                        openedChestsPerRoom[kvp.Key] = new HashSet<string>(kvp.Value);
+                    }
+                }
+
                 // Always load the checkpoint room to ensure proper spawning
                 if (!string.IsNullOrEmpty(data.CheckpointRoom))
                 {
@@ -970,6 +1198,9 @@ namespace GameProject2.Screens
             vases.Clear();
             coins.Clear();
             buttons.Clear();
+            potions.Clear();
+            pillarTorches.Clear();
+            chests.Clear();
             collisionBoxes.Clear();
 
             // Load new tilemap
@@ -1038,7 +1269,7 @@ namespace GameProject2.Screens
                         else if (obj.Class == "Button")
                         {
                             Vector2 buttonPos = new Vector2(obj.X * tilemapScale, obj.Y * tilemapScale);
-                            Button button = new Button(buttonTexture, buttonPos, 4f, obj.Name);
+                            Button button = new Button(buttonTexture, buttonPos, 2f, obj.Name);
 
                             if (obj.Name == lastCheckpointName && roomName == lastCheckpointRoom)
                             {
@@ -1047,6 +1278,61 @@ namespace GameProject2.Screens
                             }
 
                             buttons.Add(button);
+                        }
+                        else if (obj.Class == "PillarTorch")
+                        {
+                            Vector2 torchPos = new Vector2(obj.X * tilemapScale, obj.Y * tilemapScale);
+                            PillarTorch torch = new PillarTorch(torchTilesetTexture, torchPos, tilemapScale);
+                            pillarTorches.Add(torch);
+                        }
+
+                        else if (obj.Class == "Potion")
+                        {
+                            Vector2 potionPos = new Vector2(obj.X * tilemapScale, obj.Y * tilemapScale);
+
+                            string potionTypeStr = obj.Name ?? "RedMini";
+
+                            if (System.Enum.TryParse(potionTypeStr, out PotionType potionType))
+                            {
+                                Potion potion = new Potion(potionTexture, potionPos, potionType, 3f, true);
+                                potions.Add(potion);
+                            }
+                        }
+                        else if (obj.Class == "Chest")
+                        {
+                            Vector2 chestPos = new Vector2(obj.X * tilemapScale, obj.Y * tilemapScale);
+
+                            string chestId = $"{obj.X}_{obj.Y}";
+
+                            List<string> items = new List<string>();
+                            foreach (var prop in obj.Properties)
+                            {
+                                string itemType = prop.Key;
+                                string itemValue = prop.Value;
+
+                                if (itemType == "Potion")
+                                {
+                                    items.Add($"Potion.{itemValue}");
+                                }
+                                else if (itemType == "Coin")
+                                {
+                                    items.Add("Coin");
+                                }
+                            }
+
+                            Chest chest = new Chest(chestTexture, chestPos, 4f, items, chestId);
+
+                            if (!openedChestsPerRoom.ContainsKey(roomName))
+                            {
+                                openedChestsPerRoom[roomName] = new HashSet<string>();
+                            }
+
+                            if (openedChestsPerRoom[roomName].Contains(chestId))
+                            {
+                                chest.SetOpened();
+                            }
+
+                            chests.Add(chest);
                         }
                     }
                 }
@@ -1117,6 +1403,110 @@ namespace GameProject2.Screens
             LoadRoom(lastCheckpointRoom, lastCheckpointName);
 
             System.Diagnostics.Debug.WriteLine($"Player respawned at {lastCheckpointName} in {lastCheckpointRoom}");
+        }
+
+        private void DrawLayerWithDepthSorting(SpriteBatch spriteBatch, Tilemap tilemap, TileLayer layer, float scale)
+        {
+            for (int y = 0; y < layer.Height; y++)
+            {
+                for (int x = 0; x < layer.Width; x++)
+                {
+                    int index = y * layer.Width + x;
+                    int gid = layer.Tiles[index];
+
+                    if (gid == 0) continue;
+
+                    // Find the correct tileset for this gid
+                    TilesetInfo tileset = null;
+                    int localTileId = gid;
+
+                    for (int i = tilemap.Tilesets.Count - 1; i >= 0; i--)
+                    {
+                        if (gid >= tilemap.Tilesets[i].FirstGid)
+                        {
+                            tileset = tilemap.Tilesets[i];
+                            localTileId = gid - tileset.FirstGid;
+                            break;
+                        }
+                    }
+
+                    if (tileset == null || tileset.Texture == null) continue;
+
+                    int tileX = localTileId % tileset.Columns;
+                    int tileY = localTileId / tileset.Columns;
+
+                    Rectangle sourceRect = new Rectangle(
+                        tileX * tileset.TileWidth,
+                        tileY * tileset.TileHeight,
+                        tileset.TileWidth,
+                        tileset.TileHeight
+                    );
+
+                    Vector2 position = new Vector2(x * tilemap.TileWidth * scale, y * tilemap.TileHeight * scale);
+
+                    // Calculate depth based on Y position (bottom of tile)
+                    float yPosition = position.Y + (tilemap.TileHeight * scale);
+                    float normalizedY = yPosition / 2000f;
+                    float layerDepth = MathHelper.Clamp(0.9f - (normalizedY * 0.8f), 0.1f, 0.9f);
+
+                    spriteBatch.Draw(
+                        tileset.Texture,
+                        position,
+                        sourceRect,
+                        Color.White,
+                        0f,
+                        Vector2.Zero,
+                        scale,
+                        SpriteEffects.None,
+                        layerDepth
+                    );
+                }
+            }
+        }
+
+        private void SpawnItemsFromChest(List<string> items, Vector2 chestPosition)
+        {
+            System.Diagnostics.Debug.WriteLine($"SpawnItemsFromChest called with {items.Count} items at {chestPosition}");
+
+            float tilemapScale = 4f;
+
+            foreach (var item in items)
+            {
+                System.Diagnostics.Debug.WriteLine($"Processing item: {item}");
+
+                // Add some random spread so items don't all spawn in exact same spot
+                Random rng = new Random();
+                float offsetX = (float)(rng.NextDouble() * 40 - 20); // -20 to +20
+                float offsetY = (float)(rng.NextDouble() * 20 + 30); // +30 to +50 (downward)
+
+                Vector2 itemPos = new Vector2(
+                    chestPosition.X + offsetX,
+                    chestPosition.Y + offsetY
+                );
+
+                if (item.StartsWith("Potion."))
+                {
+                    string potionTypeStr = item.Substring(7); // Remove "Potion." prefix
+                    System.Diagnostics.Debug.WriteLine($"Attempting to spawn potion: {potionTypeStr}");
+
+                    if (System.Enum.TryParse(potionTypeStr, out PotionType potionType))
+                    {
+                        Potion potion = new Potion(potionTexture, itemPos, potionType, 3f, true); // true = requires E to pick up
+                        potions.Add(potion);
+                        System.Diagnostics.Debug.WriteLine($"Successfully spawned {potionType} potion at {itemPos}");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Failed to parse potion type: {potionTypeStr}");
+                    }
+                }
+                else if (item == "Coin")
+                {
+                    Coin coin = new Coin(coinTexture, itemPos, 8, 8, true);
+                    coins.Add(coin);
+                    System.Diagnostics.Debug.WriteLine($"Spawned coin at {itemPos}");
+                }
+            }
         }
     }
 }

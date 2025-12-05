@@ -9,7 +9,6 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace GameProject2.Tilemaps
 {
-    // Custom Content Importer for TMX tilemap files
     public class TmxLoader
     {
         public static Tilemap Load(string tmxFilePath, ContentManager content)
@@ -24,9 +23,10 @@ namespace GameProject2.Tilemaps
             tilemap.TileWidth = int.Parse(mapElement.Attribute("tilewidth").Value);
             tilemap.TileHeight = int.Parse(mapElement.Attribute("tileheight").Value);
 
-            XElement tilesetElement = mapElement.Element("tileset");
-            if (tilesetElement != null)
+            // Load all tilesets
+            foreach (XElement tilesetElement in mapElement.Elements("tileset"))
             {
+                int firstGid = int.Parse(tilesetElement.Attribute("firstgid").Value);
                 string tilesetSource = tilesetElement.Attribute("source")?.Value;
 
                 if (!string.IsNullOrEmpty(tilesetSource))
@@ -35,11 +35,11 @@ namespace GameProject2.Tilemaps
                     string tilesetPath = Path.Combine(contentRoot, "Tilemaps", Path.GetFileName(tilesetSource));
 
                     XDocument tilesetDoc = XDocument.Load(tilesetPath);
-                    ProcessTileset(tilesetDoc.Element("tileset"), tilemap, content, Path.GetDirectoryName(tilesetPath));
+                    ProcessTileset(tilesetDoc.Element("tileset"), tilemap, content, Path.GetDirectoryName(tilesetPath), firstGid);
                 }
                 else
                 {
-                    ProcessTileset(tilesetElement, tilemap, content, Path.GetDirectoryName(tmxFilePath));
+                    ProcessTileset(tilesetElement, tilemap, content, Path.GetDirectoryName(tmxFilePath), firstGid);
                 }
             }
 
@@ -58,12 +58,40 @@ namespace GameProject2.Tilemaps
                 if (encoding == "csv")
                 {
                     string csvData = dataElement.Value.Trim();
-                    layer.Tiles = csvData.Split(',')
-                        .Select(s => int.Parse(s.Trim()))
-                        .ToArray();
+                    var tileStrings = csvData.Split(',');
+                    layer.Tiles = new int[tileStrings.Length];
+
+                    // Tiled uses the top 3 bits for flip flags
+                    const uint FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
+                    const uint FLIPPED_VERTICALLY_FLAG = 0x40000000;
+                    const uint FLIPPED_DIAGONALLY_FLAG = 0x20000000;
+                    const uint TILE_MASK = ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG);
+
+                    for (int i = 0; i < tileStrings.Length; i++)
+                    {
+                        string tileStr = tileStrings[i].Trim();
+
+                        if (string.IsNullOrEmpty(tileStr))
+                        {
+                            layer.Tiles[i] = 0;
+                            continue;
+                        }
+
+                        try
+                        {
+                            uint gid = uint.Parse(tileStr);
+                            uint tileId = gid & TILE_MASK;
+                            layer.Tiles[i] = (int)tileId;
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"WARNING: Could not parse tile value '{tileStr}' at index {i} in layer '{layerElement.Attribute("name").Value}'. Error: {ex.Message}. Setting to 0.");
+                            layer.Tiles[i] = 0;
+                        }
+                    }
 
                     int nonZeroCount = layer.Tiles.Count(t => t != 0);
-                    Console.WriteLine($"Layer '{layer.Name}': {layer.Tiles.Length} total tiles, {nonZeroCount} non-zero");
+                    System.Diagnostics.Debug.WriteLine($"Layer '{layer.Name}': {layer.Tiles.Length} total tiles, {nonZeroCount} non-zero");
                 }
                 else
                 {
@@ -72,7 +100,7 @@ namespace GameProject2.Tilemaps
                         .ToArray();
 
                     int nonZeroCount = layer.Tiles.Count(t => t != 0);
-                    Console.WriteLine($"Layer '{layer.Name}': {layer.Tiles.Length} total tiles, {nonZeroCount} non-zero");
+                    System.Diagnostics.Debug.WriteLine($"Layer '{layer.Name}': {layer.Tiles.Length} total tiles, {nonZeroCount} non-zero");
                 }
 
                 tilemap.Layers.Add(layer);
@@ -117,22 +145,53 @@ namespace GameProject2.Tilemaps
             return tilemap;
         }
 
-        private static void ProcessTileset(XElement tilesetElement, Tilemap tilemap, ContentManager content, string baseDirectory)
+        private static void ProcessTileset(XElement tilesetElement, Tilemap tilemap, ContentManager content, string baseDirectory, int firstGid)
         {
-            tilemap.TilesetTileWidth = int.Parse(tilesetElement.Attribute("tilewidth").Value);
-            tilemap.TilesetTileHeight = int.Parse(tilesetElement.Attribute("tileheight").Value);
-            tilemap.TilesetColumns = int.Parse(tilesetElement.Attribute("columns").Value);
+            TilesetInfo tilesetInfo = new TilesetInfo
+            {
+                FirstGid = firstGid,
+                TileWidth = int.Parse(tilesetElement.Attribute("tilewidth").Value),
+                TileHeight = int.Parse(tilesetElement.Attribute("tileheight").Value),
+                Columns = int.Parse(tilesetElement.Attribute("columns").Value)
+            };
 
             XElement imageElement = tilesetElement.Element("image");
             if (imageElement != null)
             {
                 string imagePath = imageElement.Attribute("source").Value;
-
                 string fileName = Path.GetFileNameWithoutExtension(imagePath);
 
-                tilemap.TilesetTexture = content.Load<Texture2D>($"Tilemaps/{fileName}");
+                try
+                {
+                    tilesetInfo.Texture = content.Load<Texture2D>($"Tilemaps/{fileName}");
+                    System.Diagnostics.Debug.WriteLine($"Loaded tileset: {fileName} (firstgid={firstGid})");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"ERROR: Could not load tileset texture '{fileName}': {ex.Message}");
+                }
+            }
+
+            tilemap.Tilesets.Add(tilesetInfo);
+
+            // Keep the first tileset as the main one for backward compatibility
+            if (tilemap.TilesetTexture == null)
+            {
+                tilemap.TilesetTexture = tilesetInfo.Texture;
+                tilemap.TilesetColumns = tilesetInfo.Columns;
+                tilemap.TilesetTileWidth = tilesetInfo.TileWidth;
+                tilemap.TilesetTileHeight = tilesetInfo.TileHeight;
             }
         }
+    }
+
+    public class TilesetInfo
+    {
+        public int FirstGid { get; set; }
+        public Texture2D Texture { get; set; }
+        public int Columns { get; set; }
+        public int TileWidth { get; set; }
+        public int TileHeight { get; set; }
     }
 
     public class Tilemap
@@ -145,6 +204,10 @@ namespace GameProject2.Tilemaps
         public List<TileLayer> Layers { get; set; } = new List<TileLayer>();
         public List<ObjectLayer> ObjectLayers { get; set; } = new List<ObjectLayer>();
 
+        // Multiple tilesets
+        public List<TilesetInfo> Tilesets { get; set; } = new List<TilesetInfo>();
+
+        // Legacy single tileset properties (for backward compatibility)
         public Texture2D TilesetTexture { get; set; }
         public int TilesetColumns { get; set; }
         public int TilesetTileWidth { get; set; }

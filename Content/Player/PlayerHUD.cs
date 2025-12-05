@@ -1,8 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Graphics;
+using System;
 
-namespace GameProject2
+namespace GameProject2.Content.Player
 {
     public class PlayerHUD
     {
@@ -67,7 +68,7 @@ namespace GameProject2
 
             for (int i = 0; i < MaxHealth; i++)
             {
-                Vector2 heartPosition = new Vector2(padding + (i * (heartFrameWidth * scale + 10)), padding);
+                Vector2 heartPosition = new Vector2(padding + i * (heartFrameWidth * scale + 10), padding);
 
                 int frameIndex;
 
@@ -100,7 +101,7 @@ namespace GameProject2
                 );
             }
 
-            Vector2 coinPosition = new Vector2(padding, padding + (heartFrameHeight * scale) + 20);
+            Vector2 coinPosition = new Vector2(padding, padding + heartFrameHeight * scale + 20);
 
             int cropBottom = 4;
             Rectangle coinSourceRect = new Rectangle(
@@ -134,9 +135,10 @@ namespace GameProject2
             damageAnimTimer = 0f;
         }
 
-        public void Heal(int amount = 1)
+        public void Heal(int amount)
         {
-            CurrentHealth = MathHelper.Min(MaxHealth, CurrentHealth + amount);
+            CurrentHealth = Math.Min(CurrentHealth + amount, MaxHealth);
+            System.Diagnostics.Debug.WriteLine($"Healed {amount} hearts. Current health: {CurrentHealth}/{MaxHealth}");
         }
 
         public void AddCoin(int amount = 1)

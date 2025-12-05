@@ -5,38 +5,47 @@ namespace GameProject2.Tilemaps
 {
     public class TilemapRenderer
     {
-        public static void DrawLayer(SpriteBatch spriteBatch, Tilemap tilemap, TileLayer layer, float layerDepth, float scale = 1f)
+        public static void DrawLayer(SpriteBatch spriteBatch, Tilemap tilemap, TileLayer layer, float layerDepth, float scale)
         {
-            if (tilemap?.TilesetTexture == null || layer == null) return;
-
             for (int y = 0; y < layer.Height; y++)
             {
                 for (int x = 0; x < layer.Width; x++)
                 {
                     int index = y * layer.Width + x;
-                    int tileId = layer.Tiles[index];
+                    int gid = layer.Tiles[index];
 
-                    if (tileId == 0) continue;
+                    if (gid == 0) continue;
 
-                    tileId -= 1;
+                    // Find the correct tileset for this gid
+                    TilesetInfo tileset = null;
+                    int localTileId = gid;
 
-                    int tileX = tileId % tilemap.TilesetColumns;
-                    int tileY = tileId / tilemap.TilesetColumns;
+                    for (int i = tilemap.Tilesets.Count - 1; i >= 0; i--)
+                    {
+                        if (gid >= tilemap.Tilesets[i].FirstGid)
+                        {
+                            tileset = tilemap.Tilesets[i];
+                            localTileId = gid - tileset.FirstGid;
+                            break;
+                        }
+                    }
+
+                    if (tileset == null || tileset.Texture == null) continue;
+
+                    int tileX = localTileId % tileset.Columns;
+                    int tileY = localTileId / tileset.Columns;
 
                     Rectangle sourceRect = new Rectangle(
-                        tileX * tilemap.TilesetTileWidth,
-                        tileY * tilemap.TilesetTileHeight,
-                        tilemap.TilesetTileWidth,
-                        tilemap.TilesetTileHeight
+                        tileX * tileset.TileWidth,
+                        tileY * tileset.TileHeight,
+                        tileset.TileWidth,
+                        tileset.TileHeight
                     );
 
-                    Vector2 position = new Vector2(
-                        x * tilemap.TileWidth * scale,
-                        y * tilemap.TileHeight * scale
-                    );
+                    Vector2 position = new Vector2(x * tilemap.TileWidth * scale, y * tilemap.TileHeight * scale);
 
                     spriteBatch.Draw(
-                        tilemap.TilesetTexture,
+                        tileset.Texture,
                         position,
                         sourceRect,
                         Color.White,

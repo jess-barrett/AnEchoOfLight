@@ -17,6 +17,7 @@ namespace GameProject2.SaveSystem
         public float MusicVolume { get; set; }
         public float SfxVolume { get; set; }
         public Dictionary<string, List<string>> DestroyedVases { get; set; } = new Dictionary<string, List<string>>();
+        public Dictionary<string, List<string>> OpenedChests { get; set; } = new Dictionary<string, List<string>>();
 
         public static void Save(SaveData data, string filename = "savegame.json")
         {
