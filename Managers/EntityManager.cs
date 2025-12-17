@@ -20,6 +20,7 @@ namespace GameProject2.Managers
         private static List<Potion> _potions = new List<Potion>();
         private static List<Button> _buttons = new List<Button>();
         private static List<PillarTorch> _pillarTorches = new List<PillarTorch>();
+        private static List<WallTorch> _wallTorches = new List<WallTorch>();
         private static List<Totem> _totems = new List<Totem>();
         private static Trophy _trophy;
 
@@ -31,6 +32,7 @@ namespace GameProject2.Managers
         public static IReadOnlyList<Potion> Potions => _potions;
         public static IReadOnlyList<Button> Buttons => _buttons;
         public static IReadOnlyList<PillarTorch> PillarTorches => _pillarTorches;
+        public static IReadOnlyList<WallTorch> WallTorches => _wallTorches;
         public static IReadOnlyList<Totem> Totems => _totems;
         public static Trophy Trophy => _trophy;
 
@@ -45,6 +47,7 @@ namespace GameProject2.Managers
         private static Texture2D _totemTexture;
         private static Texture2D _blueSlimeSheet;
         private static Texture2D _woodenDoubleDoorTexture;
+        private static Texture2D _wallTorchTexture;
 
         // Load all entity textures
         public static void LoadContent(ContentManager content)
@@ -59,6 +62,7 @@ namespace GameProject2.Managers
             _totemTexture = content.Load<Texture2D>("Interactables/Totems");
             _blueSlimeSheet = content.Load<Texture2D>("Enemies/Blue Slime");
             _woodenDoubleDoorTexture = content.Load<Texture2D>("Interactables/WoodenDoubleDoor");
+            _wallTorchTexture = content.Load<Texture2D>("Torches");
 
             // Initialize GauntletManager with textures
             GauntletManager.LoadContent(_totemTexture, _woodenDoubleDoorTexture);
@@ -74,6 +78,7 @@ namespace GameProject2.Managers
             _potions.Clear();
             _buttons.Clear();
             _pillarTorches.Clear();
+            _wallTorches.Clear();
             _totems.Clear();
             _trophy = null;
         }
@@ -134,6 +139,9 @@ namespace GameProject2.Managers
                             {
                                 SpawnTotem(pos, obj, roomName, activatedTotems, tilemapScale);
                             }
+                            break;
+                        case "WallTorch":
+                            SpawnWallTorch(pos, obj, tilemapScale);
                             break;
                     }
                 }
@@ -225,6 +233,46 @@ namespace GameProject2.Managers
         private static void SpawnPillarTorch(Vector2 pos, float scale)
         {
             _pillarTorches.Add(new PillarTorch(_torchTilesetTexture, pos, scale));
+        }
+
+        private static void SpawnWallTorch(Vector2 pos, TiledObject obj, float scale)
+        {
+            TorchMount mount = TorchMount.Front;
+
+            switch (obj.Name)
+            {
+                case "TorchLeft":
+                    mount = TorchMount.Left;
+                    break;
+                case "TorchFront":
+                    mount = TorchMount.Front;
+                    break;
+                case "TorchRight":
+                    mount = TorchMount.Right;
+                    break;
+            }
+
+            TorchColor color = TorchColor.Red;
+            if (obj.Properties.TryGetValue("Color", out string colorValue))
+            {
+                switch (colorValue)
+                {
+                    case "Red":
+                        color = TorchColor.Red;
+                        break;
+                    case "Blue":
+                        color = TorchColor.Blue;
+                        break;
+                    case "Orange":
+                        color = TorchColor.Orange;
+                        break;
+                    case "Green":
+                        color = TorchColor.Green;
+                        break;
+                }
+            }
+
+            _wallTorches.Add(new WallTorch(_wallTorchTexture, pos, scale, mount, color));
         }
 
         private static void SpawnPotion(Vector2 pos, TiledObject obj)
@@ -339,6 +387,9 @@ namespace GameProject2.Managers
                 coin.Update(gameTime);
 
             foreach (var torch in _pillarTorches)
+                torch.Update(gameTime);
+
+            foreach (var torch in _wallTorches)
                 torch.Update(gameTime);
 
             foreach (var potion in _potions)

@@ -985,6 +985,15 @@ namespace GameProject2.Screens
                 torch.Draw(_spriteBatch, layerDepth);
             }
 
+            // Draw wall torches (entity depth range 0.1-0.49)
+            foreach (var torch in EntityManager.WallTorches)
+            {
+                float yPosition = torch.Position.Y;
+                float normalizedY = yPosition / 2000f;
+                float layerDepth = MathHelper.Clamp(0.49f - (normalizedY * 0.39f), 0.1f, 0.49f);
+                torch.Draw(_spriteBatch, layerDepth);
+            }
+
             // Draw chests (entity depth range 0.1-0.49)
             foreach (var chest in EntityManager.Chests)
             {

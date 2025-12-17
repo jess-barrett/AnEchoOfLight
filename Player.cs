@@ -385,6 +385,7 @@ namespace GameProject2
                 Animation.setFrame(0);
                 Animation.Position = position;
                 dashTimer = dashDuration;
+                AudioManager.PlayDashSound();
 
                 // Set dash direction based on current direction
                 switch (Direction)

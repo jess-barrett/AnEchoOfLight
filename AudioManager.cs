@@ -25,6 +25,7 @@ namespace GameProject2
         private static SoundEffect chestOpenSound;
         private static SoundEffect potionPickupSound;
         private static SoundEffect coinPickupSound;
+        private static SoundEffect dashSound;
         private static SoundEffect dashGauntletMusicEffect;
 
         private static SoundEffectInstance menuMusicInstance;
@@ -77,6 +78,7 @@ namespace GameProject2
             chestOpenSound = content.Load<SoundEffect>("Sound/ChestOpenSound");
             potionPickupSound = content.Load<SoundEffect>("Sound/PotionPickupSound");
             coinPickupSound = content.Load<SoundEffect>("Sound/CoinPickupSound");
+            dashSound = content.Load<SoundEffect>("Sound/PlayerMovement/DashSound");
             dashGauntletMusicEffect = content.Load<SoundEffect>("Sound/DashGauntletSoundtrack");
 
             // Create looping instances for music
@@ -250,6 +252,11 @@ namespace GameProject2
         public static void PlayCoinPickupSound(float volume = 1f, float pitch = 0.0f, float pan = 0.0f)
         {
             coinPickupSound?.Play(volume * SFXVolume, pitch, pan);
+        }
+
+        public static void PlayDashSound(float volume = 1f, float pitch = 0.0f, float pan = 0.0f)
+        {
+            dashSound?.Play(volume * SFXVolume, pitch, pan);
         }
     }
 }

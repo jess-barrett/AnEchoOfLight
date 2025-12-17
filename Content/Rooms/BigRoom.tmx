@@ -131,9 +131,9 @@
   </object>
   <object id="8" name="WormRoom" type="Door" x="459.789" y="207.719" width="3.36842" height="47.7193"/>
   <object id="9" type="Wall" x="0.561404" y="207.719" width="4.49123" height="47.7193"/>
-  <object id="10" type="Wall" x="207.158" y="7.85965" width="48.8421" height="3.36842"/>
+  <object id="10" name="MazeRoom" type="Wall" x="207.719" y="1.12281" width="48.8421" height="3.36842"/>
   <object id="11" name="DashGauntlet" type="Door" x="207.158" y="477.754" width="49.4035" height="1.68421"/>
-  <object id="12" name="From" type="SpawnPoint" x="232.421" y="54.4561">
+  <object id="12" name="FromMazeRoom" type="SpawnPoint" x="231.86" y="43.228">
    <point/>
   </object>
   <object id="13" name="FromDashGauntlet" type="SpawnPoint" x="232.421" y="454.737">

@@ -19,7 +19,7 @@
     - Use allowed in your learning project.  
     - Do not redistribute as standalone assets outside of your project.
 
-- **Tilemap Dungeon Set** – sourced from [Dungeon Gathering Free Version](https://snowhex.itch.io/dungeon-gathering) on Itch.io.  
+- **Tilemap Dungeon Set** – sourced from [Dungeon Gathering Full Version](https://snowhex.itch.io/dungeon-gathering) on Itch.io.  
   - **License Summary:**
     - Free version available for use in personal and commercial projects.
     - Credit to Snowhex is appreciated but not required.
