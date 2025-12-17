@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="16" tileheight="16" infinite="0" nextlayerid="5" nextobjectid="31">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="16" tileheight="16" infinite="0" nextlayerid="5" nextobjectid="72">
  <tileset firstgid="1" source="../Tilemaps/Dungeon_1.tsx"/>
  <objectgroup id="3" name="Collision">
   <object id="1" type="Wall" x="112.493" y="17.6365" width="126.316" height="14.7766"/>
@@ -79,13 +79,13 @@
   <object id="24" name="CP-Room1" type="Checkpoint" x="143.952" y="63.8729">
    <point/>
   </object>
-  <object id="25" type="Skull" x="432.334" y="191.619">
+  <object id="25" name="Skull" type="Skull" x="432.334" y="191.619">
    <point/>
   </object>
-  <object id="26" type="Skull" x="31.9364" y="255.015">
+  <object id="26" name="Skull" type="Skull" x="31.9364" y="255.015">
    <point/>
   </object>
-  <object id="27" type="Skull" x="47.1897" y="128.222">
+  <object id="27" name="BlueSlime" type="BlueSlime" x="47.1897" y="128.222">
    <point/>
   </object>
   <object id="28" name="CP-Room1" type="Button" x="168.262" y="57.6763">
@@ -93,6 +93,129 @@
   </object>
   <object id="29" name="WormRoom" type="Door" x="0" y="143.476" width="2.38332" height="48.143"/>
   <object id="30" name="FromWormRoom" type="SpawnPoint" x="10.4866" y="173.982">
+   <point/>
+  </object>
+  <object id="31" name="BlueSlime" type="BlueSlime" x="40.0397" y="145.382">
+   <point/>
+  </object>
+  <object id="32" name="BlueSlime" type="BlueSlime" x="59.5829" y="140.616">
+   <point/>
+  </object>
+  <object id="33" name="BlueSlime" type="BlueSlime" x="320.794" y="55.2929">
+   <point/>
+  </object>
+  <object id="34" name="BlueSlime" type="BlueSlime" x="311.738" y="66.7329">
+   <point/>
+  </object>
+  <object id="35" name="BlueSlime" type="BlueSlime" x="331.281" y="70.0695">
+   <point/>
+  </object>
+  <object id="36" name="TorchFront" type="WallTorch" x="223.555" y="164.449">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="45" name="TorchFront" type="WallTorch" x="288.381" y="165.402">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="46" name="TorchFront" type="WallTorch" x="255.968" y="22.4032">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="47" name="TorchFront" type="WallTorch" x="336.524" y="22.4032">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="48" name="TorchFront" type="WallTorch" x="416.127" y="21.9265">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="49" name="TorchFront" type="WallTorch" x="192.095" y="38.1331">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="50" name="TorchFront" type="WallTorch" x="143.952" y="38.6097">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="51" name="TorchFront" type="WallTorch" x="95.3327" y="102.006">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="52" name="TorchFront" type="WallTorch" x="47.6663" y="102.959">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="54" name="TorchLeft" type="WallTorch" x="23.8332" y="239.762">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="55" name="TorchLeft" type="WallTorch" x="120.119" y="89.6127">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="56" name="TorchLeft" type="WallTorch" x="230.705" y="72.4528">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="58" name="TorchLeft" type="WallTorch" x="310.785" y="135.849">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="59" name="TorchRight" type="WallTorch" x="424.707" y="63.8729">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="68" name="TorchRight" type="WallTorch" x="440.914" y="160.159">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="69" name="TorchRight" type="WallTorch" x="200.199" y="136.802">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="70" name="TorchRight" type="WallTorch" x="199.722" y="91.5194">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="71" name="TorchRight" type="WallTorch" x="360.357" y="241.668">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
    <point/>
   </object>
  </objectgroup>

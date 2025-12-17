@@ -62,6 +62,9 @@ namespace GameProject2
         public event Action OnRedPotionUsed;
         public event Action OnRedMiniPotionUsed;
 
+        // Event for falling in water after dash
+        public event Action OnFellInWater;
+
         // Previous keyboard state for single-press detection
         private KeyboardState previousKbState;
 
@@ -72,6 +75,11 @@ namespace GameProject2
         private Vector2 dashDirection;
         private float dashCooldown = 2f;
         private float dashCooldownTimer = 0f;
+
+        // Attack2 cooldown
+        private float attack2Cooldown = 3f;
+        private float attack2CooldownTimer = 0f;
+        private bool attack2SoundPlayed = false;
 
         public Vector2 Position => position;
 
@@ -150,20 +158,22 @@ namespace GameProject2
         }
 
         // Damage values for attacks
-        public const int Attack1Damage = 25;
+        public const int Attack1Damage = 20;
         public const int Attack2Damage = 40;
 
         // Track enemies that have been hit this attack to prevent multi-hit
         private HashSet<IEnemy> enemiesHitThisAttack = new HashSet<IEnemy>();
 
-        public void Update(GameTime gameTime, List<IEnemy> enemies, ParticleSystem particleSystem, List<Rectangle> collisionBoxes)
+        public void Update(GameTime gameTime, List<IEnemy> enemies, ParticleSystem particleSystem, List<Rectangle> collisionBoxes, List<Rectangle> waterBoxes = null)
         {
             KeyboardState kbState = Keyboard.GetState();
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // Update dash cooldown
+            // Update cooldowns
             if (dashCooldownTimer > 0)
                 dashCooldownTimer -= dt;
+            if (attack2CooldownTimer > 0)
+                attack2CooldownTimer -= dt;
 
             // === DEATH LOGIC ===
             if (State == PlayerState.Death)
@@ -235,6 +245,7 @@ namespace GameProject2
                         112
                     );
 
+                    // During dash, only check solid walls (not water - player can dash over water)
                     bool collided = false;
                     foreach (var wall in collisionBoxes)
                     {
@@ -259,6 +270,27 @@ namespace GameProject2
                 {
                     State = PlayerState.Idle;
                     dashCooldownTimer = dashCooldown;
+
+                    // Check if player ended dash while still in water
+                    if (waterBoxes != null && waterBoxes.Count > 0)
+                    {
+                        Rectangle currentHitbox = new Rectangle(
+                            (int)(position.X - 24),
+                            (int)(position.Y - 56),
+                            48,
+                            112
+                        );
+
+                        foreach (var water in waterBoxes)
+                        {
+                            if (currentHitbox.Intersects(water))
+                            {
+                                // Player fell in water - fire event for damage and respawn
+                                OnFellInWater?.Invoke();
+                                break;
+                            }
+                        }
+                    }
                 }
 
                 return;
@@ -323,6 +355,13 @@ namespace GameProject2
             if (State == PlayerState.Attack2)
             {
                 Animation.Update(gameTime);
+
+                // Play swing sound after wind-up (frame 0) completes
+                if (!attack2SoundPlayed && Animation.CurrentFrameIndex >= 1)
+                {
+                    AudioManager.PlaySwingSwordSound(0.35f, -0.3f); // Pitched down
+                    attack2SoundPlayed = true;
+                }
 
                 int attackStartFrame = 2;
                 int attackEndFrame = 5;
@@ -442,8 +481,8 @@ namespace GameProject2
                 return;
             }
 
-            // === ATTACK2 TRIGGER (Right Click) - requires unlock ===
-            if (HasAttack2 && mouseState.RightButton == ButtonState.Pressed)
+            // === ATTACK2 TRIGGER (Right Click) - requires unlock and cooldown ===
+            if (HasAttack2 && mouseState.RightButton == ButtonState.Pressed && attack2CooldownTimer <= 0)
             {
                 State = PlayerState.Attack2;
                 Animation = attack2Animations[(int)Direction];
@@ -452,7 +491,8 @@ namespace GameProject2
                 Animation.Position = position;
                 enemiesHitThisAttack.Clear();
                 GauntletManager.ClearAttackHitTracking(); // Clear totem hit tracking
-                AudioManager.PlaySwingSwordSound(0.35f);
+                attack2SoundPlayed = false; // Reset so sound plays after wind-up
+                attack2CooldownTimer = attack2Cooldown;
                 OnAttack2Used?.Invoke();
                 return;
             }
@@ -487,6 +527,19 @@ namespace GameProject2
                     {
                         collided = true;
                         break;
+                    }
+                }
+
+                // Also check water boxes as walls during normal movement
+                if (!collided && waterBoxes != null)
+                {
+                    foreach (var water in waterBoxes)
+                    {
+                        if (newHitbox.Intersects(water))
+                        {
+                            collided = true;
+                            break;
+                        }
                     }
                 }
 

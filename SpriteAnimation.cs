@@ -45,6 +45,9 @@ namespace GameProject2
         public bool IsLooping = true;
         private float timeToUpdate;
 
+        // Per-frame duration multipliers (optional)
+        private float[] frameDurationMultipliers;
+
         public int FramesPerSecond { set { timeToUpdate = (1f / value); } }
         public Rectangle CurrentFrameRectangle => Rectangles[FrameIndex];
 
@@ -53,12 +56,29 @@ namespace GameProject2
             FramesPerSecond = fps;
         }
 
+        /// <summary>
+        /// Set custom duration multipliers for specific frames.
+        /// A multiplier of 2 means that frame plays twice as long.
+        /// </summary>
+        public void SetFrameDurations(float[] multipliers)
+        {
+            frameDurationMultipliers = multipliers;
+        }
+
         public void Update(GameTime gameTime)
         {
             timeElapsed += (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (timeElapsed > timeToUpdate)
+
+            // Get duration for current frame (use multiplier if set)
+            float currentFrameDuration = timeToUpdate;
+            if (frameDurationMultipliers != null && FrameIndex < frameDurationMultipliers.Length)
             {
-                timeElapsed -= timeToUpdate;
+                currentFrameDuration *= frameDurationMultipliers[FrameIndex];
+            }
+
+            if (timeElapsed > currentFrameDuration)
+            {
+                timeElapsed -= currentFrameDuration;
                 if (FrameIndex < Rectangles.Length - 1)
                     FrameIndex++;
                 else if (IsLooping)
@@ -69,6 +89,7 @@ namespace GameProject2
         public void setFrame(int frame)
         {
             FrameIndex = frame;
+            timeElapsed = 0f;
         }
     }
 }

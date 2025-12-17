@@ -122,6 +122,9 @@ namespace GameProject2.Screens
             player.OnRedMiniPotionUsed += HandleRedMiniPotionUsed;
             player.OnHealAnimationComplete += HandleHealAnimationComplete;
 
+            // Subscribe to water falling event
+            player.OnFellInWater += HandleFellInWater;
+
             camera = new Camera(ScreenManager.GraphicsDevice);
             particleSystem = new ParticleSystem(ScreenManager.GraphicsDevice);
 
@@ -253,10 +256,16 @@ namespace GameProject2.Screens
             player.deathAnimations[3] = new SpriteAnimation(deathRight, 7, 7);
             animations.Add(player.deathAnimations);
 
-            player.attack2Animations[0] = new SpriteAnimation(attack2Down, 8, 20);
-            player.attack2Animations[1] = new SpriteAnimation(attack2Up, 8, 20);
-            player.attack2Animations[2] = new SpriteAnimation(attack2Left, 8, 20);
-            player.attack2Animations[3] = new SpriteAnimation(attack2Right, 8, 20);
+            player.attack2Animations[0] = new SpriteAnimation(attack2Down, 8, 12);
+            player.attack2Animations[1] = new SpriteAnimation(attack2Up, 8, 12);
+            player.attack2Animations[2] = new SpriteAnimation(attack2Left, 8, 12);
+            player.attack2Animations[3] = new SpriteAnimation(attack2Right, 8, 12);
+            // Wind-up on frame 0: hold 3x longer, then normal speed for rest
+            float[] attack2FrameDurations = { 3f, 1f, 1f, 1f, 1f, 1f, 1f, 1f };
+            foreach (var anim in player.attack2Animations)
+            {
+                anim.SetFrameDurations(attack2FrameDurations);
+            }
             animations.Add(player.attack2Animations);
 
             player.dashAnimations[0] = new SpriteAnimation(dashDown, 7, 20);
@@ -334,6 +343,37 @@ namespace GameProject2.Screens
             hud.Heal(healAmount);
         }
 
+        private void HandleFellInWater()
+        {
+            // Take 1 heart of damage
+            hud.TakeDamage();
+            AudioManager.PlayTakeDamageSound(0.5f);
+
+            if (hud.CurrentHealth <= 0)
+            {
+                // Player died from water
+                player.State = PlayerState.Death;
+                player.Animation = player.deathAnimations[(int)player.Direction];
+                player.Animation.IsLooping = false;
+                player.Animation.setFrame(0);
+                isDying = true;
+                deathFadeTimer = 0f;
+                AudioManager.PlayDeathSound(0.25f);
+            }
+            else
+            {
+                // Respawn at room's spawn point
+                var spawnPos = RoomManager.FindSpawnPoint($"From{RoomManager.LastRoom}")
+                    ?? RoomManager.FindSpawnPoint("InitialSpawn")
+                    ?? RoomManager.GetRoomCenter();
+
+                player.SetX(spawnPos.X);
+                player.SetY(spawnPos.Y);
+                player.State = PlayerState.Idle;
+                player.Animation = player.idleAnimations[(int)player.Direction];
+            }
+        }
+
         public override void Unload()
         {
             // Unsubscribe from events
@@ -347,6 +387,7 @@ namespace GameProject2.Screens
             player.OnRedPotionUsed -= HandleRedPotionUsed;
             player.OnRedMiniPotionUsed -= HandleRedMiniPotionUsed;
             player.OnHealAnimationComplete -= HandleHealAnimationComplete;
+            player.OnFellInWater -= HandleFellInWater;
 
             SaveGame();
             _content.Unload();
@@ -438,7 +479,7 @@ namespace GameProject2.Screens
 
             // Update particles, player, HUD
             particleSystem.Update(gameTime);
-            player.Update(gameTime, EntityManager.GetEnemiesMutable(), particleSystem, collisionBoxes);
+            player.Update(gameTime, EntityManager.GetEnemiesMutable(), particleSystem, collisionBoxes, RoomManager.WaterBoxes);
 
             // Sync HUD ability unlock states with player
             hud.HasAttack2 = player.HasAttack2;

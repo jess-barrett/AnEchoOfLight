@@ -28,6 +28,8 @@ namespace GameProject2.Managers
             ShowCheckpointMessage = true;
             _messageTimer = MessageDuration;
 
+            AudioManager.PlayCheckpointSound();
+
             System.Diagnostics.Debug.WriteLine($"Checkpoint activated: {checkpointName} in {room}");
         }
 

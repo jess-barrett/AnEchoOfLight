@@ -26,6 +26,8 @@
     - Cannot resell or redistribute as a standalone asset pack.
     - Modifications are allowed for use in your project.
 
+- **Orc Boss Animations** - sourced from [Free Orc Pixel Characters Sprites](https://free-game-assets.itch.io/free-top-down-orc-game-character-pixel-art) on Itch.io.
+
 - **Sounds** - sourced from Epidemic Sound unless specified below
     - Chest Opening Sound Effect by Benjamin Adams from Pixabay
     - Coin Pickup Sound Effect by freesound_community from Pixabay

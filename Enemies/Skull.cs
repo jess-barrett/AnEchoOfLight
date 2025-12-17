@@ -32,7 +32,7 @@ namespace GameProject2.Enemies
         }
 
         public Skull(Texture2D texture, int frames, int fps, Vector2 startPosition)
-            : base(maxHealth: 100)
+            : base(maxHealth: 60)
         {
             Position = startPosition;
             Speed = 80f;

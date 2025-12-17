@@ -12,6 +12,7 @@ namespace GameProject2.Managers
         public static string CurrentRoom { get; private set; } = "StartingRoom";
         public static string LastRoom { get; private set; }
         public static List<Rectangle> CollisionBoxes { get; private set; } = new List<Rectangle>();
+        public static List<Rectangle> WaterBoxes { get; private set; } = new List<Rectangle>();
 
         public const float TilemapScale = 4f;
 
@@ -38,12 +39,13 @@ namespace GameProject2.Managers
             }
 
             ExtractCollisionBoxes();
-            System.Diagnostics.Debug.WriteLine($"RoomManager: Extracted {CollisionBoxes.Count} collision boxes");
+            System.Diagnostics.Debug.WriteLine($"RoomManager: Extracted {CollisionBoxes.Count} collision boxes, {WaterBoxes.Count} water boxes");
         }
 
         private static void ExtractCollisionBoxes()
         {
             CollisionBoxes.Clear();
+            WaterBoxes.Clear();
 
             foreach (var objectLayer in CurrentTilemap.ObjectLayers)
             {
@@ -51,12 +53,22 @@ namespace GameProject2.Managers
                 {
                     foreach (var obj in objectLayer.Objects)
                     {
-                        CollisionBoxes.Add(new Rectangle(
+                        Rectangle box = new Rectangle(
                             (int)(obj.X * TilemapScale),
                             (int)(obj.Y * TilemapScale),
                             (int)(obj.Width * TilemapScale),
                             (int)(obj.Height * TilemapScale)
-                        ));
+                        );
+
+                        // Check if this is a Water collision box
+                        if (obj.Class == "Water")
+                        {
+                            WaterBoxes.Add(box);
+                        }
+                        else
+                        {
+                            CollisionBoxes.Add(box);
+                        }
                     }
                 }
             }
