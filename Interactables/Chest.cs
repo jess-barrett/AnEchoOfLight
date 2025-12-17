@@ -59,8 +59,7 @@ namespace GameProject2
                 animationTimer = 0f;
                 HasBeenOpened = true;
 
-                // Play chest open sound
-                // AudioManager.PlayChestOpenSound();
+                AudioManager.PlayChestOpenSound(0.5f);
             }
         }
 

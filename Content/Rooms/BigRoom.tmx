@@ -132,18 +132,19 @@
   <object id="8" name="WormRoom" type="Door" x="459.789" y="207.719" width="3.36842" height="47.7193"/>
   <object id="9" type="Wall" x="0.561404" y="207.719" width="4.49123" height="47.7193"/>
   <object id="10" type="Wall" x="207.158" y="7.85965" width="48.8421" height="3.36842"/>
-  <object id="11" name="DashRoom" type="Door" x="207.158" y="477.754" width="49.4035" height="1.68421"/>
+  <object id="11" name="DashGauntlet" type="Door" x="207.158" y="477.754" width="49.4035" height="1.68421"/>
   <object id="12" name="From" type="SpawnPoint" x="232.421" y="54.4561">
    <point/>
   </object>
-  <object id="13" name="FromDashRoom" type="SpawnPoint" x="232.421" y="454.737">
+  <object id="13" name="FromDashGauntlet" type="SpawnPoint" x="232.421" y="454.737">
    <point/>
   </object>
   <object id="14" name="From" type="SpawnPoint" x="26.386" y="241.965">
    <point/>
   </object>
-  <object id="23" name="Chest" type="Chest" x="120.14" y="232.982">
+  <object id="23" name="Chest" type="Chest" x="119.579" y="213.894">
    <properties>
+    <property name="Coin" type="int" value="2"/>
     <property name="Potion" value="RedMini"/>
    </properties>
    <point/>

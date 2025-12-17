@@ -72,6 +72,7 @@ namespace GameProject2
                 State = TotemState.Idle;
                 currentFrame = 0;
                 animationTimer = 0f;
+                AudioManager.PlayTotemActivateSound(0.5f);
             }
         }
 

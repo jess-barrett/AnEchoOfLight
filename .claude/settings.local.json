@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(dir \"C:\\CIS580\\GameProjects\\GameProject2\" /s /b /ad)",
-      "Bash(dotnet build:*)"
+      "Bash(dotnet build:*)",
+      "Bash(dir:*)",
+      "Bash(powershell -Command \"Get-Content ''C:\\CIS580\\GameProjects\\GameProject2\\Content\\Content.mgcb'' | Select-Object -Last 20\")",
+      "Bash(powershell -Command \"[System.Drawing.Image]::FromFile(''C:\\CIS580\\GameProjects\\GameProject2\\Content\\HUD\\Icons.png'') | Select-Object Width, Height\")",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

@@ -25,3 +25,8 @@
     - Credit to Snowhex is appreciated but not required.
     - Cannot resell or redistribute as a standalone asset pack.
     - Modifications are allowed for use in your project.
+
+- **Sounds** - sourced from Epidemic Sound unless specified below
+    - Chest Opening Sound Effect by Benjamin Adams from Pixabay
+    - Coin Pickup Sound Effect by freesound_community from Pixabay
+    - Potion Pickup Sound Effect by freesound_community from Pixabay

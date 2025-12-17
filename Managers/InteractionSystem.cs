@@ -79,6 +79,7 @@ namespace GameProject2.Managers
                     {
                         coin.IsCollected = true;
                         hud.AddCoin();
+                        AudioManager.PlayCoinPickupSound(0.5f);
                         EntityManager.RemoveCoin(coin);
                     }
                 }
@@ -87,6 +88,7 @@ namespace GameProject2.Managers
                     // Auto-collect
                     coin.IsCollected = true;
                     hud.AddCoin();
+                    AudioManager.PlayCoinPickupSound(0.5f);
                     EntityManager.RemoveCoin(coin);
                 }
             }
@@ -107,28 +109,35 @@ namespace GameProject2.Managers
                     if (current.IsKeyDown(Keys.E) && previous.IsKeyUp(Keys.E))
                     {
                         potion.IsCollected = true;
-                        potion.ApplyEffect(hud);
+                        AddPotionToInventory(potion.Type, hud);
                         EntityManager.RemovePotion(potion);
-
-                        // Trigger heal animation for health potions
-                        if (potion.Type == PotionType.RedMini || potion.Type == PotionType.Red)
-                        {
-                            player.TriggerHealAnimation();
-                        }
                     }
                 }
                 else
                 {
+                    // Auto-collect potions add to inventory
                     potion.IsCollected = true;
-                    potion.ApplyEffect(hud);
+                    AddPotionToInventory(potion.Type, hud);
                     EntityManager.RemovePotion(potion);
-
-                    // Trigger heal animation for health potions
-                    if (potion.Type == PotionType.RedMini || potion.Type == PotionType.Red)
-                    {
-                        player.TriggerHealAnimation();
-                    }
                 }
+            }
+        }
+
+        private static void AddPotionToInventory(PotionType type, PlayerHUD hud)
+        {
+            AudioManager.PlayPotionPickupSound(0.5f);
+
+            switch (type)
+            {
+                case PotionType.Red:
+                    hud.AddRedPotion();
+                    System.Diagnostics.Debug.WriteLine("Added Red Potion to inventory");
+                    break;
+                case PotionType.RedMini:
+                    hud.AddRedMiniPotion();
+                    System.Diagnostics.Debug.WriteLine("Added Red Mini Potion to inventory");
+                    break;
+                // Other potion types can be added here in the future
             }
         }
 
@@ -224,18 +233,33 @@ namespace GameProject2.Managers
             System.Diagnostics.Debug.WriteLine($"SpawnChestItems called with {items.Count} items at {chestPosition}");
 
             Random rng = new Random();
+            int itemIndex = 0;
+            int itemCount = items.Count;
+
             foreach (var item in items)
             {
                 System.Diagnostics.Debug.WriteLine($"Processing item: {item}");
 
-                // Add some random spread so items don't all spawn in exact same spot
-                float offsetX = (float)(rng.NextDouble() * 40 - 20); // -20 to +20
-                float offsetY = (float)(rng.NextDouble() * 20 + 30); // +30 to +50 (downward)
+                // Spread items in an arc below the chest
+                // Calculate base angle spread based on item count
+                float spreadAngle = 120f; // Total arc in degrees
+                float startAngle = 90f - spreadAngle / 2f; // Center the arc below (90 = straight down)
+                float angleStep = itemCount > 1 ? spreadAngle / (itemCount - 1) : 0f;
+                float angle = startAngle + (angleStep * itemIndex);
+                float angleRad = MathHelper.ToRadians(angle);
+
+                // Distance from chest with some randomness
+                float distance = 70f + (float)(rng.NextDouble() * 40); // 70-110 pixels
+
+                float offsetX = (float)Math.Cos(angleRad) * distance;
+                float offsetY = (float)Math.Sin(angleRad) * distance;
 
                 Vector2 itemPos = new Vector2(
                     chestPosition.X + offsetX,
                     chestPosition.Y + offsetY
                 );
+
+                itemIndex++;
 
                 if (item.StartsWith("Potion."))
                 {

@@ -91,13 +91,13 @@
     <property name="spawnPoint" value="FromRoom1"/>
    </properties>
   </object>
-  <object id="24" type="Skull" x="47.3126" y="48.2053">
+  <object id="24" name="BlueSlime" type="Enemy" x="47.3126" y="48.2053">
    <point/>
   </object>
   <object id="25" type="Skull" x="298.159" y="238.349">
    <point/>
   </object>
-  <object id="26" type="Skull" x="383.411" y="52.6688">
+  <object id="26" name="BlueSlime" type="Enemy" x="383.411" y="52.6688">
    <point/>
   </object>
   <object id="27" name="CP-StartingRoom" type="Checkpoint" x="55.3468" y="233.439">

@@ -23,8 +23,15 @@ namespace GameProject2.SaveSystem
         public bool HasAttack2 { get; set; } = false;
         public bool HasDash { get; set; } = false;
 
+        // Potion inventory
+        public int RedPotionCount { get; set; } = 1;
+        public int RedMiniPotionCount { get; set; } = 2;
+
         // Activated totems
         public List<string> ActivatedTotems { get; set; } = new List<string>();
+
+        // Completed gauntlets (room names)
+        public List<string> CompletedGauntlets { get; set; } = new List<string>();
 
         public static void Save(SaveData data, string filename = "savegame.json")
         {

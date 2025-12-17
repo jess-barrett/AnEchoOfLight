@@ -1,5 +1,6 @@
 using Comora;
 using GameProject2.Content.Player;
+using GameProject2.Enemies;
 using GameProject2.Graphics3D;
 using GameProject2.Managers;
 using GameProject2.SaveSystem;
@@ -22,6 +23,8 @@ namespace GameProject2.Screens
 
         private Player player;
         private PlayerHUD hud;
+        private Action onDashUsedHandler;
+        private Action onAttack2UsedHandler;
 
         private Camera camera;
         private ParticleSystem particleSystem;
@@ -31,6 +34,7 @@ namespace GameProject2.Screens
         private Dictionary<string, HashSet<string>> destroyedVasesPerRoom = new Dictionary<string, HashSet<string>>();
         private Dictionary<string, HashSet<string>> openedChestsPerRoom = new Dictionary<string, HashSet<string>>();
         private HashSet<string> activatedTotems = new HashSet<string>();
+        private HashSet<string> completedGauntlets = new HashSet<string>();
 
         // Unlock overlay state
         private bool showUnlockOverlay = false;
@@ -79,9 +83,11 @@ namespace GameProject2.Screens
             // Clear any stale state from previous game sessions
             System.Diagnostics.Debug.WriteLine("GameplayScreen.Activate: Clearing stale state...");
             EntityManager.ClearAll();
+            GauntletManager.ClearAll();
             destroyedVasesPerRoom.Clear();
             openedChestsPerRoom.Clear();
             activatedTotems.Clear();
+            completedGauntlets.Clear();
 
             // Initialize managers
             System.Diagnostics.Debug.WriteLine("GameplayScreen.Activate: Loading EntityManager content...");
@@ -97,6 +103,17 @@ namespace GameProject2.Screens
 
             hud = new PlayerHUD();
             hud.LoadContent(_content);
+
+            // Subscribe to player ability events for HUD cooldown triggers
+            onDashUsedHandler = () => hud.TriggerDashCooldown();
+            onAttack2UsedHandler = () => hud.TriggerAttack2Cooldown();
+            player.OnDashUsed += onDashUsedHandler;
+            player.OnAttack2Used += onAttack2UsedHandler;
+
+            // Subscribe to potion usage events
+            player.OnRedPotionUsed += HandleRedPotionUsed;
+            player.OnRedMiniPotionUsed += HandleRedMiniPotionUsed;
+            player.OnHealAnimationComplete += HandleHealAnimationComplete;
 
             camera = new Camera(ScreenManager.GraphicsDevice);
             particleSystem = new ParticleSystem(ScreenManager.GraphicsDevice);
@@ -114,6 +131,13 @@ namespace GameProject2.Screens
                 CheckpointManager.LastCheckpointName,
                 CheckpointManager.LastCheckpointRoom,
                 ScreenManager.GraphicsDevice);
+
+            // Spawn gauntlet entities for starting room
+            GauntletManager.SpawnFromTilemap(
+                RoomManager.CurrentTilemap,
+                RoomManager.CurrentRoom,
+                RoomManager.TilemapScale,
+                completedGauntlets);
 
             // Set initial player position at spawn point
             var initialSpawn = RoomManager.FindSpawnPoint("InitialSpawn") ?? RoomManager.GetRoomCenter();
@@ -264,12 +288,58 @@ namespace GameProject2.Screens
             ScreenManager.AddScreen(new TrophyScreen(), ControllingPlayer);
         }
 
+        private void HandleRedPotionUsed()
+        {
+            int healAmount = hud.UseRedPotion();
+            if (healAmount > 0)
+            {
+                // If animation can't start (e.g., already healing), refund the potion
+                if (player.TriggerHealAnimation(healAmount))
+                {
+                    AudioManager.PlayHealSound(0.5f);
+                }
+                else
+                {
+                    hud.AddRedPotion();
+                }
+            }
+        }
+
+        private void HandleRedMiniPotionUsed()
+        {
+            int healAmount = hud.UseRedMiniPotion();
+            if (healAmount > 0)
+            {
+                // If animation can't start (e.g., already healing), refund the potion
+                if (player.TriggerHealAnimation(healAmount))
+                {
+                    AudioManager.PlayHealSound(0.5f);
+                }
+                else
+                {
+                    hud.AddRedMiniPotion();
+                }
+            }
+        }
+
+        private void HandleHealAnimationComplete(int healAmount)
+        {
+            hud.Heal(healAmount);
+        }
+
         public override void Unload()
         {
             // Unsubscribe from events
             InteractionSystem.OnCheckpointActivated -= HandleCheckpointActivated;
             InteractionSystem.OnTrophyInteracted -= HandleTrophyInteracted;
             InteractionSystem.ClearEvents();
+
+            // Unsubscribe from player events
+            player.OnDashUsed -= onDashUsedHandler;
+            player.OnAttack2Used -= onAttack2UsedHandler;
+            player.OnRedPotionUsed -= HandleRedPotionUsed;
+            player.OnRedMiniPotionUsed -= HandleRedMiniPotionUsed;
+            player.OnHealAnimationComplete -= HandleHealAnimationComplete;
 
             SaveGame();
             _content.Unload();
@@ -319,7 +389,19 @@ namespace GameProject2.Screens
 
             // Update managers
             CheckpointManager.Update(dt);
-            EntityManager.Update(gameTime, player, RoomManager.CollisionBoxes);
+
+            // Filter collision boxes to remove open door colliders
+            var collisionBoxes = GauntletManager.FilterCollisionBoxes(RoomManager.CollisionBoxes);
+
+            EntityManager.Update(gameTime, player, collisionBoxes);
+            GauntletManager.Update(gameTime, player, collisionBoxes);
+
+            // Check if gauntlet was just completed
+            if (GauntletManager.IsGauntletCompleted() && !completedGauntlets.Contains(RoomManager.CurrentRoom))
+            {
+                completedGauntlets.Add(RoomManager.CurrentRoom);
+                SaveGame();
+            }
 
             // Handle interactions (coins, potions, buttons, chests, trophy)
             InteractionSystem.Update(
@@ -349,7 +431,16 @@ namespace GameProject2.Screens
 
             // Update particles, player, HUD
             particleSystem.Update(gameTime);
-            player.Update(gameTime, EntityManager.GetEnemiesMutable(), particleSystem, RoomManager.CollisionBoxes);
+            player.Update(gameTime, EntityManager.GetEnemiesMutable(), particleSystem, collisionBoxes);
+
+            // Sync HUD ability unlock states with player
+            hud.HasAttack2 = player.HasAttack2;
+            hud.HasDash = player.HasDash;
+
+            // Sync active states for held abilities
+            hud.SetAttack1Active(player.State == PlayerState.Attack1);
+            hud.SetSprintActive(player.State == PlayerState.Run);
+
             hud.Update(gameTime);
 
             if (EntityManager.Trophy != null)
@@ -397,13 +488,18 @@ namespace GameProject2.Screens
         private void HandleEnemyCollisions()
         {
             RotatedRectangle playerHitbox = player.RotatedHitbox;
-            Skull skullToRemove = null;
 
-            foreach (var skull in EntityManager.Enemies)
+            foreach (var enemy in EntityManager.Enemies)
             {
-                if (playerHitbox.Intersects(skull.RotatedHitbox))
+                // Skip dead or dying enemies
+                if (enemy.IsDead)
+                    continue;
+
+                if (playerHitbox.Intersects(enemy.RotatedHitbox))
                 {
-                    if (player.State != PlayerState.Attack1 && player.State != PlayerState.Hurt && player.State != PlayerState.Death)
+                    if (player.State != PlayerState.Attack1 && player.State != PlayerState.Attack2 &&
+                        player.State != PlayerState.Hurt && player.State != PlayerState.Death &&
+                        player.State != PlayerState.Dash)
                     {
                         hud.TakeDamage();
 
@@ -426,15 +522,16 @@ namespace GameProject2.Screens
                             AudioManager.PlayTakeDamageSound(0.5f);
                         }
 
-                        particleSystem.CreateSkullDeathEffect(skull.Position);
-                        skullToRemove = skull;
+                        // Enemy dies on contact with player (suicide attack)
+                        enemy.TakeDamage(enemy.MaxHealth);
+                        if (enemy.ShowDeathParticles)
+                        {
+                            particleSystem.CreateSkullDeathEffect(enemy.Position);
+                        }
                         break; // Only handle one collision per frame
                     }
                 }
             }
-
-            if (skullToRemove != null)
-                EntityManager.RemoveEnemy(skullToRemove);
         }
 
         private void HandlePlayerAttackingVases()
@@ -559,6 +656,7 @@ namespace GameProject2.Screens
                     activatedTotems.Add(totem.TotemId);
                     pendingTotemDrop = totem;
                     showUnlockOverlay = true;
+                    AudioManager.PlayTotemAbilityUnlockSound(0.8f);
 
                     // Save immediately
                     SaveGame();
@@ -574,7 +672,20 @@ namespace GameProject2.Screens
                 SaveGame();
 
             EntityManager.ClearAll();
+            GauntletManager.ClearAll();
             RoomManager.LoadRoom(roomName, _content);
+
+            // Handle room-specific music
+            if (roomName == "DashGauntlet")
+            {
+                // Stop music when entering DashGauntlet (will start when gauntlet triggers)
+                AudioManager.StopMusic();
+            }
+            else if (AudioManager.IsDashGauntletMusicPlaying())
+            {
+                // Resume normal gameplay music when leaving DashGauntlet
+                AudioManager.PlayGameplayMusic();
+            }
 
             EntityManager.SpawnFromTilemap(
                 RoomManager.CurrentTilemap,
@@ -586,6 +697,13 @@ namespace GameProject2.Screens
                 CheckpointManager.LastCheckpointName,
                 CheckpointManager.LastCheckpointRoom,
                 ScreenManager.GraphicsDevice);
+
+            // Spawn gauntlet entities (spawner totems, doors)
+            GauntletManager.SpawnFromTilemap(
+                RoomManager.CurrentTilemap,
+                RoomManager.CurrentRoom,
+                RoomManager.TilemapScale,
+                completedGauntlets);
 
             // Position player at spawn point
             var spawnPos = RoomManager.FindSpawnPoint(spawnPointName)
@@ -636,7 +754,10 @@ namespace GameProject2.Screens
                 OpenedChests = openedChestsForSave,
                 HasAttack2 = player.HasAttack2,
                 HasDash = player.HasDash,
-                ActivatedTotems = new List<string>(activatedTotems)
+                ActivatedTotems = new List<string>(activatedTotems),
+                CompletedGauntlets = new List<string>(completedGauntlets),
+                RedPotionCount = hud.RedPotionCount,
+                RedMiniPotionCount = hud.RedMiniPotionCount
             };
 
             SaveData.Save(data);
@@ -656,6 +777,8 @@ namespace GameProject2.Screens
                 hud.CoinCount = data.CoinCount;
                 hud.CurrentHealth = data.CurrentHealth;
                 hud.MaxHealth = data.MaxHealth;
+                hud.RedPotionCount = data.RedPotionCount;
+                hud.RedMiniPotionCount = data.RedMiniPotionCount;
 
                 CheckpointManager.LoadFromSave(data);
 
@@ -702,7 +825,24 @@ namespace GameProject2.Screens
                     }
                 }
 
+                // Load completed gauntlets
+                if (data.CompletedGauntlets != null)
+                {
+                    completedGauntlets.Clear();
+                    foreach (var roomName in data.CompletedGauntlets)
+                    {
+                        completedGauntlets.Add(roomName);
+                    }
+                }
+
                 System.Diagnostics.Debug.WriteLine("Game loaded!");
+            }
+            else
+            {
+                // New game - set initial potion inventory
+                hud.RedPotionCount = 1;
+                hud.RedMiniPotionCount = 2;
+                System.Diagnostics.Debug.WriteLine("No save file found - starting new game with initial potions");
             }
         }
 
@@ -745,22 +885,65 @@ namespace GameProject2.Screens
                 }
             }
 
-            // Build and draw sprite list (player, enemies, vases)
-            var drawList = new List<SpriteAnimation>();
+            // Draw player animation
             if (player.Animation != null)
-                drawList.Add(player.Animation);
-            drawList.AddRange(EntityManager.Enemies.Select(e => e.Animation));
-            drawList.AddRange(EntityManager.Vases.Select(v => v.Animation));
-
-            drawList = drawList
-                .OrderBy(anim => anim.Position.Y + anim.FrameHeight / 2f)
-                .ToList();
-
-            foreach (var anim in drawList)
             {
+                var anim = player.Animation;
                 float yPosition = anim.Position.Y + anim.FrameHeight / 2f + anim.LayerDepthOffset;
                 float normalizedY = yPosition / 2000f;
-                // Entities use depth range 0.1-0.49 (always in front of decor which uses 0.5-0.9)
+                float layerDepth = MathHelper.Clamp(0.49f - (normalizedY * 0.39f), 0.1f, 0.49f);
+
+                _spriteBatch.Draw(
+                    anim.GetTexture,
+                    anim.Position,
+                    anim.CurrentFrameRectangle,
+                    anim.Color,
+                    anim.Rotation,
+                    anim.Origin,
+                    anim.Scale,
+                    anim.SpriteEffect,
+                    layerDepth
+                );
+            }
+
+            // Draw enemies (each enemy handles its own drawing to support custom animations)
+            foreach (var enemy in EntityManager.Enemies)
+            {
+                float yPosition = enemy.Position.Y + enemy.Animation.LayerDepthOffset;
+                float normalizedY = yPosition / 2000f;
+                float layerDepth = MathHelper.Clamp(0.49f - (normalizedY * 0.39f), 0.1f, 0.49f);
+                enemy.Animation.LayerDepth = layerDepth;
+                enemy.Draw(_spriteBatch);
+                enemy.DrawHealthBar(_spriteBatch, instructionFont);
+            }
+
+            // Draw gauntlet spawner totems
+            // Use slightly lower layer depth to draw in front of tilemap tiles
+            foreach (var totem in GauntletManager.SpawnerTotems)
+            {
+                float yPosition = totem.Position.Y;
+                float normalizedY = yPosition / 2000f;
+                float layerDepth = MathHelper.Clamp(0.48f - (normalizedY * 0.39f), 0.09f, 0.48f);
+                totem.Draw(_spriteBatch, layerDepth);
+                totem.DrawHealthBar(_spriteBatch, instructionFont);
+            }
+
+            // Draw wooden double doors
+            // Use slightly lower layer depth to draw in front of tilemap tiles
+            foreach (var door in GauntletManager.Doors)
+            {
+                float yPosition = door.Position.Y;
+                float normalizedY = yPosition / 2000f;
+                float layerDepth = MathHelper.Clamp(0.48f - (normalizedY * 0.39f), 0.09f, 0.48f);
+                door.Draw(_spriteBatch, layerDepth);
+            }
+
+            // Draw vases
+            foreach (var vase in EntityManager.Vases)
+            {
+                var anim = vase.Animation;
+                float yPosition = anim.Position.Y + anim.FrameHeight / 2f + anim.LayerDepthOffset;
+                float normalizedY = yPosition / 2000f;
                 float layerDepth = MathHelper.Clamp(0.49f - (normalizedY * 0.39f), 0.1f, 0.49f);
 
                 _spriteBatch.Draw(
