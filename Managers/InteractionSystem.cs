@@ -288,13 +288,76 @@ namespace GameProject2.Managers
         public static void HandleVaseDestroyed(Vase vase, string currentRoom,
             Dictionary<string, HashSet<string>> destroyedVases)
         {
-            if (!destroyedVases.ContainsKey(currentRoom))
-                destroyedVases[currentRoom] = new HashSet<string>();
+            // Only persist destruction if vase name is NOT "ApproachVase" (those respawn each visit)
+            if (vase.VaseName != "ApproachVase")
+            {
+                if (!destroyedVases.ContainsKey(currentRoom))
+                    destroyedVases[currentRoom] = new HashSet<string>();
 
-            destroyedVases[currentRoom].Add(vase.VaseId);
-            EntityManager.SpawnCoin(vase.Position, false); // Auto-collect coin
+                destroyedVases[currentRoom].Add(vase.VaseId);
+            }
+
+            // Play vase break sound
+            AudioManager.PlayVaseBreakSound(0.5f);
+
+            // Calculate total item count for arc spread
+            int totalItems = vase.CoinDropCount + vase.PotionRedDropCount + vase.PotionRedMiniDropCount;
+
+            if (totalItems == 0)
+            {
+                EntityManager.RemoveVase(vase);
+                OnVaseDestroyed?.Invoke(currentRoom, vase.VaseId);
+                return;
+            }
+
+            Random rng = new Random();
+            int itemIndex = 0;
+
+            // Spread items in an arc around the vase (360 degrees for vases)
+            float spreadAngle = totalItems > 1 ? 360f : 0f;
+            float angleStep = totalItems > 1 ? spreadAngle / totalItems : 0f;
+            float startAngle = 0f;
+
+            // Spawn coins
+            for (int i = 0; i < vase.CoinDropCount; i++)
+            {
+                Vector2 itemPos = GetArcSpawnPosition(vase.Position, itemIndex, totalItems, startAngle, angleStep, rng);
+                EntityManager.SpawnCoin(itemPos, true);
+                itemIndex++;
+            }
+
+            // Spawn Red potions
+            for (int i = 0; i < vase.PotionRedDropCount; i++)
+            {
+                Vector2 itemPos = GetArcSpawnPosition(vase.Position, itemIndex, totalItems, startAngle, angleStep, rng);
+                EntityManager.SpawnPotion(itemPos, PotionType.Red, true);
+                itemIndex++;
+            }
+
+            // Spawn RedMini potions
+            for (int i = 0; i < vase.PotionRedMiniDropCount; i++)
+            {
+                Vector2 itemPos = GetArcSpawnPosition(vase.Position, itemIndex, totalItems, startAngle, angleStep, rng);
+                EntityManager.SpawnPotion(itemPos, PotionType.RedMini, true);
+                itemIndex++;
+            }
+
             EntityManager.RemoveVase(vase);
             OnVaseDestroyed?.Invoke(currentRoom, vase.VaseId);
+        }
+
+        private static Vector2 GetArcSpawnPosition(Vector2 center, int itemIndex, int totalItems, float startAngle, float angleStep, Random rng)
+        {
+            float angle = startAngle + (angleStep * itemIndex);
+            float angleRad = MathHelper.ToRadians(angle);
+
+            // Distance from vase with some randomness (smaller than chest since vases are smaller)
+            float distance = 50f + (float)(rng.NextDouble() * 30); // 50-80 pixels
+
+            float offsetX = (float)Math.Cos(angleRad) * distance;
+            float offsetY = (float)Math.Sin(angleRad) * distance;
+
+            return new Vector2(center.X + offsetX, center.Y + offsetY);
         }
 
         // Clear event subscriptions (call in GameplayScreen.Unload)

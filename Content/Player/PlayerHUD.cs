@@ -21,8 +21,8 @@ namespace GameProject2.Content.Player
         private int coinFrameWidth;
         private int coinFrameHeight;
 
-        public int MaxHealth { get; set; } = 3;
-        public int CurrentHealth { get; set; } = 3;
+        public int MaxHealth { get; set; } = 5;
+        public int CurrentHealth { get; set; } = 5;
         public int CoinCount { get; set; } = 0;
 
         // Damage animation

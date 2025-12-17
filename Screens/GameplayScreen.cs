@@ -23,6 +23,7 @@ namespace GameProject2.Screens
 
         private Player player;
         private PlayerHUD hud;
+        private BossHealthBar bossHealthBar;
         private Action onDashUsedHandler;
         private Action onAttack2UsedHandler;
 
@@ -33,6 +34,7 @@ namespace GameProject2.Screens
         // Per-room persistent state (owned here, passed to managers)
         private Dictionary<string, HashSet<string>> destroyedVasesPerRoom = new Dictionary<string, HashSet<string>>();
         private Dictionary<string, HashSet<string>> openedChestsPerRoom = new Dictionary<string, HashSet<string>>();
+        private Dictionary<string, HashSet<string>> destroyedCratesPerRoom = new Dictionary<string, HashSet<string>>();
         private HashSet<string> activatedTotems = new HashSet<string>();
         private HashSet<string> completedGauntlets = new HashSet<string>();
 
@@ -41,6 +43,24 @@ namespace GameProject2.Screens
         private string unlockTitle = "";
         private string unlockDescription = "";
         private Totem pendingTotemDrop = null;
+
+        // Victory overlay state
+        private bool showVictoryOverlay = false;
+        private bool bossDefeated = false;
+        private bool bossDeathAnimationComplete = false;
+        private bool victoryShown = false;
+        private float victoryDelayTimer = 0f;
+        private const float VictoryDelayDuration = 1.0f;
+
+        // Light rays fade effect
+        private float lightRaysFadeProgress = 0f;
+        private bool lightRaysFadeStarted = false;
+        private bool lightRaysFadeComplete = false;
+        private const float LightRaysFadeDuration = 3.0f;
+
+        // Persistent boss defeated state (saved to file)
+        private bool orcKingDefeated = false;
+        private bool orcKingDefeatedFromSave = false; // True only if loaded from save file
 
         private KeyboardState previousKeyboardState;
         private Matrix view3D;
@@ -108,6 +128,11 @@ namespace GameProject2.Screens
             player = new Player();
             LoadPlayerAnimations();
 
+            // Set initial player position immediately to avoid flicker
+            var initialSpawn = RoomManager.FindSpawnPoint("InitialSpawn") ?? RoomManager.GetRoomCenter();
+            player.SetX(initialSpawn.X);
+            player.SetY(initialSpawn.Y);
+
             hud = new PlayerHUD();
             hud.LoadContent(_content);
 
@@ -130,6 +155,8 @@ namespace GameProject2.Screens
 
             instructionFont = _content.Load<SpriteFont>("InstructionFont");
 
+            bossHealthBar = new BossHealthBar(ScreenManager.GraphicsDevice, instructionFont, "Orc King");
+
             // Spawn entities for starting room
             EntityManager.SpawnFromTilemap(
                 RoomManager.CurrentTilemap,
@@ -137,22 +164,20 @@ namespace GameProject2.Screens
                 RoomManager.TilemapScale,
                 destroyedVasesPerRoom,
                 openedChestsPerRoom,
+                destroyedCratesPerRoom,
                 activatedTotems,
                 CheckpointManager.LastCheckpointName,
                 CheckpointManager.LastCheckpointRoom,
-                ScreenManager.GraphicsDevice);
+                ScreenManager.GraphicsDevice,
+                orcKingDefeated);
 
             // Spawn gauntlet entities for starting room
             GauntletManager.SpawnFromTilemap(
                 RoomManager.CurrentTilemap,
                 RoomManager.CurrentRoom,
                 RoomManager.TilemapScale,
-                completedGauntlets);
-
-            // Set initial player position at spawn point
-            var initialSpawn = RoomManager.FindSpawnPoint("InitialSpawn") ?? RoomManager.GetRoomCenter();
-            player.SetX(initialSpawn.X);
-            player.SetY(initialSpawn.Y);
+                completedGauntlets,
+                orcKingDefeated);
 
             // Setup 3D projection
             projection3D = Matrix.CreatePerspectiveFieldOfView(
@@ -347,7 +372,7 @@ namespace GameProject2.Screens
         {
             // Take 1 heart of damage
             hud.TakeDamage();
-            AudioManager.PlayTakeDamageSound(0.5f);
+            AudioManager.PlayPlayerTakeDamageSound(0.5f);
 
             if (hud.CurrentHealth <= 0)
             {
@@ -435,6 +460,29 @@ namespace GameProject2.Screens
                 return; // Pause all other updates
             }
 
+            // Handle victory overlay (pauses gameplay)
+            if (showVictoryOverlay)
+            {
+                if (currentKeyboardState.IsKeyDown(Keys.E) && previousKeyboardState.IsKeyUp(Keys.E))
+                {
+                    showVictoryOverlay = false;
+                    AudioManager.PlayGameplayMusic();
+
+                    // Open the boss room doors
+                    foreach (var door in GauntletManager.Doors)
+                    {
+                        door.Open();
+                    }
+                    if (GauntletManager.Doors.Count > 0)
+                    {
+                        AudioManager.PlayWoodDoorOpenSound(0.5f);
+                    }
+                }
+
+                previousKeyboardState = currentKeyboardState;
+                return; // Pause all other updates
+            }
+
             // Update managers
             CheckpointManager.Update(dt);
 
@@ -443,6 +491,63 @@ namespace GameProject2.Screens
 
             EntityManager.Update(gameTime, player, collisionBoxes);
             GauntletManager.Update(gameTime, player, collisionBoxes);
+
+            // Boss fight music handling
+            if (EntityManager.OrcBoss != null && !EntityManager.OrcBoss.IsDead)
+            {
+                if (!AudioManager.IsBossFightMusicPlaying())
+                {
+                    AudioManager.PlayBossFightMusic();
+                }
+            }
+            else if (AudioManager.IsBossFightMusicPlaying())
+            {
+                // Boss died, stop music and wait for death animation
+                AudioManager.StopMusic();
+                bossDefeated = true;
+                orcKingDefeated = true;
+                SaveGame();
+            }
+
+            // Wait for boss death animation to complete, then start light rays fade
+            if (bossDefeated && !victoryShown)
+            {
+                if (EntityManager.OrcBoss != null && EntityManager.OrcBoss.IsDeathAnimationComplete)
+                {
+                    if (!bossDeathAnimationComplete)
+                    {
+                        bossDeathAnimationComplete = true;
+                        victoryDelayTimer = 0f;
+                    }
+                    else if (!lightRaysFadeStarted)
+                    {
+                        victoryDelayTimer += dt;
+                        if (victoryDelayTimer >= VictoryDelayDuration)
+                        {
+                            // Start the light rays fade
+                            lightRaysFadeStarted = true;
+                            lightRaysFadeProgress = 0f;
+                        }
+                    }
+                    else if (!lightRaysFadeComplete)
+                    {
+                        // Update light rays fade
+                        lightRaysFadeProgress += dt / LightRaysFadeDuration;
+                        if (lightRaysFadeProgress >= 1f)
+                        {
+                            lightRaysFadeProgress = 1f;
+                            lightRaysFadeComplete = true;
+                        }
+                    }
+                    else
+                    {
+                        // Light rays complete, show victory immediately
+                        AudioManager.PlayBossFightVictorySound(0.2f);
+                        showVictoryOverlay = true;
+                        victoryShown = true;
+                    }
+                }
+            }
 
             // Check if gauntlet was just completed
             if (GauntletManager.IsGauntletCompleted() && !completedGauntlets.Contains(RoomManager.CurrentRoom))
@@ -470,6 +575,7 @@ namespace GameProject2.Screens
 
             // Combat: player attacking vases
             HandlePlayerAttackingVases();
+            HandlePlayerAttackingCrates();
 
             // Check door transitions
             CheckDoorTransitions();
@@ -479,7 +585,12 @@ namespace GameProject2.Screens
 
             // Update particles, player, HUD
             particleSystem.Update(gameTime);
-            player.Update(gameTime, EntityManager.GetEnemiesMutable(), particleSystem, collisionBoxes, RoomManager.WaterBoxes);
+
+            // Rebuild collision boxes with current crate state (after crates may have been destroyed)
+            var playerCollisionBoxes = new List<Rectangle>(GauntletManager.FilterCollisionBoxes(RoomManager.CollisionBoxes));
+            playerCollisionBoxes.AddRange(EntityManager.GetCrateCollisionBoxes());
+
+            player.Update(gameTime, EntityManager.GetEnemiesMutable(), particleSystem, playerCollisionBoxes, RoomManager.WaterBoxes);
 
             // Sync HUD ability unlock states with player
             hud.HasAttack2 = player.HasAttack2;
@@ -543,6 +654,13 @@ namespace GameProject2.Screens
                 if (enemy.IsDead)
                     continue;
 
+                // Special handling for OrcBoss - only takes damage from boss attacks, not contact
+                if (enemy is OrcBoss boss)
+                {
+                    HandleBossAttackDamage(boss);
+                    continue;
+                }
+
                 if (playerHitbox.Intersects(enemy.RotatedHitbox))
                 {
                     if (player.State != PlayerState.Attack1 && player.State != PlayerState.Attack2 &&
@@ -567,7 +685,7 @@ namespace GameProject2.Screens
                             player.Animation = player.hurtAnimations[(int)player.Direction];
                             player.Animation.IsLooping = false;
                             player.Animation.setFrame(0);
-                            AudioManager.PlayTakeDamageSound(0.5f);
+                            AudioManager.PlayPlayerTakeDamageSound(0.5f);
                         }
 
                         // Enemy dies on contact with player (suicide attack)
@@ -578,6 +696,44 @@ namespace GameProject2.Screens
                         }
                         break; // Only handle one collision per frame
                     }
+                }
+            }
+        }
+
+        private void HandleBossAttackDamage(OrcBoss boss)
+        {
+            // Only deal damage if boss is in attack frames and hasn't already hit this attack
+            if (!boss.IsAttackingAndInDamageFrames())
+                return;
+
+            // Check if player can take damage
+            if (player.State == PlayerState.Hurt || player.State == PlayerState.Death || player.State == PlayerState.Dash)
+                return;
+
+            Rectangle attackHitbox = boss.GetCurrentAttackHitbox();
+
+            if (attackHitbox.Intersects(player.Hitbox))
+            {
+                boss.MarkDamageDealt();
+                hud.TakeDamage();
+
+                if (hud.CurrentHealth <= 0)
+                {
+                    player.State = PlayerState.Death;
+                    player.Animation = player.deathAnimations[(int)player.Direction];
+                    player.Animation.IsLooping = false;
+                    player.Animation.setFrame(0);
+                    isDying = true;
+                    deathFadeTimer = 0f;
+                    AudioManager.PlayDeathSound(0.25f);
+                }
+                else
+                {
+                    player.State = PlayerState.Hurt;
+                    player.Animation = player.hurtAnimations[(int)player.Direction];
+                    player.Animation.IsLooping = false;
+                    player.Animation.setFrame(0);
+                    AudioManager.PlayPlayerTakeDamageSound(0.5f);
                 }
             }
         }
@@ -614,6 +770,77 @@ namespace GameProject2.Screens
                 {
                     vase.IsDestroyed = true;
                     InteractionSystem.HandleVaseDestroyed(vase, RoomManager.CurrentRoom, destroyedVasesPerRoom);
+                }
+            }
+        }
+
+        // Track crates hit this attack to prevent multi-hit
+        private HashSet<Crate> cratesHitThisAttack = new HashSet<Crate>();
+
+        private void HandlePlayerAttackingCrates()
+        {
+            // Crates can ONLY be broken by Attack2
+            if (player.State != PlayerState.Attack2)
+            {
+                cratesHitThisAttack.Clear();
+                return;
+            }
+
+            // Attack2 has wider range
+            Rectangle attackHitbox = player.Hitbox;
+            int verticalRange = 60;
+            int horizontalRange = 140;
+
+            switch (player.Direction)
+            {
+                case Direction.Up:
+                    attackHitbox.Y -= verticalRange;
+                    attackHitbox.Height += verticalRange;
+                    break;
+                case Direction.Down:
+                    attackHitbox.Height += verticalRange;
+                    break;
+                case Direction.Left:
+                    attackHitbox.X -= horizontalRange;
+                    attackHitbox.Width += horizontalRange;
+                    break;
+                case Direction.Right:
+                    attackHitbox.Width += horizontalRange;
+                    break;
+            }
+
+            // Only check during active attack frames (2-5)
+            int currentFrame = player.Animation.CurrentFrameIndex;
+            if (currentFrame < 2 || currentFrame > 5) return;
+
+            foreach (var crate in EntityManager.Crates)
+            {
+                if (crate.IsDestroyed || cratesHitThisAttack.Contains(crate))
+                    continue;
+
+                if (attackHitbox.Intersects(crate.Hitbox))
+                {
+                    cratesHitThisAttack.Add(crate);
+                    bool destroyed = crate.TakeDamage(1);
+
+                    if (destroyed)
+                    {
+                        // Large particle effect for destruction
+                        particleSystem.CreateWoodSplinterEffect(crate.Position, true);
+                        AudioManager.PlaySwingSwordSound(0.2f, 0.5f); // Higher pitch for breaking sound
+
+                        // Track destroyed crate for save system
+                        if (!destroyedCratesPerRoom.ContainsKey(RoomManager.CurrentRoom))
+                            destroyedCratesPerRoom[RoomManager.CurrentRoom] = new HashSet<string>();
+                        destroyedCratesPerRoom[RoomManager.CurrentRoom].Add(crate.CrateId);
+
+                        SaveGame();
+                    }
+                    else
+                    {
+                        // Small particle effect for hit
+                        particleSystem.CreateWoodSplinterEffect(crate.Position, false);
+                    }
                 }
             }
         }
@@ -741,17 +968,20 @@ namespace GameProject2.Screens
                 RoomManager.TilemapScale,
                 destroyedVasesPerRoom,
                 openedChestsPerRoom,
+                destroyedCratesPerRoom,
                 activatedTotems,
                 CheckpointManager.LastCheckpointName,
                 CheckpointManager.LastCheckpointRoom,
-                ScreenManager.GraphicsDevice);
+                ScreenManager.GraphicsDevice,
+                orcKingDefeated);
 
             // Spawn gauntlet entities (spawner totems, doors)
             GauntletManager.SpawnFromTilemap(
                 RoomManager.CurrentTilemap,
                 RoomManager.CurrentRoom,
                 RoomManager.TilemapScale,
-                completedGauntlets);
+                completedGauntlets,
+                orcKingDefeated);
 
             // Position player at spawn point
             var spawnPos = RoomManager.FindSpawnPoint(spawnPointName)
@@ -788,6 +1018,12 @@ namespace GameProject2.Screens
                 openedChestsForSave[kvp.Key] = new List<string>(kvp.Value);
             }
 
+            var destroyedCratesForSave = new Dictionary<string, List<string>>();
+            foreach (var kvp in destroyedCratesPerRoom)
+            {
+                destroyedCratesForSave[kvp.Key] = new List<string>(kvp.Value);
+            }
+
             SaveData data = new SaveData
             {
                 CoinCount = hud.CoinCount,
@@ -800,12 +1036,14 @@ namespace GameProject2.Screens
                 SfxVolume = AudioManager.SFXVolume,
                 DestroyedVases = destroyedVasesForSave,
                 OpenedChests = openedChestsForSave,
+                DestroyedCrates = destroyedCratesForSave,
                 HasAttack2 = player.HasAttack2,
                 HasDash = player.HasDash,
                 ActivatedTotems = new List<string>(activatedTotems),
                 CompletedGauntlets = new List<string>(completedGauntlets),
                 RedPotionCount = hud.RedPotionCount,
-                RedMiniPotionCount = hud.RedMiniPotionCount
+                RedMiniPotionCount = hud.RedMiniPotionCount,
+                OrcKingDefeated = orcKingDefeated
             };
 
             SaveData.Save(data);
@@ -850,6 +1088,16 @@ namespace GameProject2.Screens
                     }
                 }
 
+                // Load destroyed crates
+                if (data.DestroyedCrates != null)
+                {
+                    destroyedCratesPerRoom.Clear();
+                    foreach (var kvp in data.DestroyedCrates)
+                    {
+                        destroyedCratesPerRoom[kvp.Key] = new HashSet<string>(kvp.Value);
+                    }
+                }
+
                 // Load the checkpoint room
                 if (!string.IsNullOrEmpty(data.CheckpointRoom))
                 {
@@ -883,6 +1131,10 @@ namespace GameProject2.Screens
                     }
                 }
 
+                // Load boss defeated state
+                orcKingDefeated = data.OrcKingDefeated;
+                orcKingDefeatedFromSave = data.OrcKingDefeated;
+
                 System.Diagnostics.Debug.WriteLine("Game loaded!");
             }
             else
@@ -897,6 +1149,18 @@ namespace GameProject2.Screens
         public override void Draw(GameTime gameTime)
         {
             ScreenManager.GraphicsDevice.Clear(Color.CornflowerBlue);
+
+            // Cover the first frames with black to avoid spawn position flicker
+            if (TransitionAlpha < 0.5f)
+            {
+                _spriteBatch.Begin();
+                _spriteBatch.Draw(fadeTexture, new Rectangle(0, 0,
+                    ScreenManager.GraphicsDevice.Viewport.Width,
+                    ScreenManager.GraphicsDevice.Viewport.Height),
+                    Color.Black);
+                _spriteBatch.End();
+                return;
+            }
 
             var tilemap = RoomManager.CurrentTilemap;
             if (tilemap == null)
@@ -1007,6 +1271,18 @@ namespace GameProject2.Screens
                 );
             }
 
+            // Draw crates (Y-sorted so bottom crates appear in front)
+            foreach (var crate in EntityManager.Crates)
+            {
+                if (!crate.IsDestroyed)
+                {
+                    float yPosition = crate.Position.Y + crate.Hitbox.Height / 2f;
+                    float normalizedY = yPosition / 2000f;
+                    float layerDepth = MathHelper.Clamp(0.49f - (normalizedY * 0.39f), 0.1f, 0.49f);
+                    crate.Draw(_spriteBatch, layerDepth);
+                }
+            }
+
             // Draw buttons
             foreach (var button in EntityManager.Buttons)
             {
@@ -1090,6 +1366,22 @@ namespace GameProject2.Screens
                 }
             }
 
+            // Draw LightRays layer (with diagonal fade during boss defeat, or fully visible if loaded from save)
+            if (lightRaysFadeStarted || orcKingDefeatedFromSave)
+            {
+                for (int i = 0; i < tilemap.Layers.Count; i++)
+                {
+                    var layer = tilemap.Layers[i];
+                    if (layer.Name == "LightRays")
+                    {
+                        float layerDepth = 0.04f; // In front of other overlays
+                        // If boss was already defeated from save, show fully; otherwise use fade progress
+                        float progress = orcKingDefeatedFromSave ? 1f : lightRaysFadeProgress;
+                        TilemapRenderer.DrawLayerWithDiagonalFade(_spriteBatch, tilemap, layer, layerDepth, RoomManager.TilemapScale, progress);
+                    }
+                }
+            }
+
             particleSystem.Draw(_spriteBatch, 0.05f);
 
             // Draw trophy interaction prompt
@@ -1153,6 +1445,12 @@ namespace GameProject2.Screens
             // Draw HUD
             hud.Draw(_spriteBatch, ScreenManager.GraphicsDevice.Viewport);
 
+            // Draw boss health bar if boss exists and is alive
+            if (EntityManager.OrcBoss != null && !EntityManager.OrcBoss.IsDeathAnimationComplete)
+            {
+                bossHealthBar.Draw(_spriteBatch, ScreenManager.GraphicsDevice.Viewport, EntityManager.OrcBoss);
+            }
+
             // Draw death fade overlay
             if (isDying && deathFadeAlpha > 0)
             {
@@ -1169,6 +1467,12 @@ namespace GameProject2.Screens
             if (showUnlockOverlay)
             {
                 DrawUnlockOverlay();
+            }
+
+            // Draw victory overlay
+            if (showVictoryOverlay)
+            {
+                DrawVictoryOverlay();
             }
 
             _spriteBatch.End();
@@ -1268,6 +1572,128 @@ namespace GameProject2.Screens
                     line,
                     linePos,
                     Color.White,
+                    0f,
+                    Vector2.Zero,
+                    descScale,
+                    SpriteEffects.None,
+                    0f
+                );
+
+                startY += lineHeight;
+            }
+        }
+
+        private void DrawVictoryOverlay()
+        {
+            var viewport = ScreenManager.GraphicsDevice.Viewport;
+
+            // Draw semi-transparent background
+            _spriteBatch.Draw(
+                fadeTexture,
+                new Rectangle(0, 0, viewport.Width, viewport.Height),
+                Color.Black * 0.8f
+            );
+
+            // Draw "YOU WIN!" title
+            string victoryTitle = "YOU WIN!";
+            float titleScale = 3.5f;
+            Vector2 titleSize = instructionFont.MeasureString(victoryTitle) * titleScale;
+            Vector2 titlePos = new Vector2(
+                (viewport.Width - titleSize.X) / 2,
+                viewport.Height / 4
+            );
+
+            // Title outline
+            for (int x = -3; x <= 3; x++)
+            {
+                for (int y = -3; y <= 3; y++)
+                {
+                    if (x != 0 || y != 0)
+                    {
+                        _spriteBatch.DrawString(
+                            instructionFont,
+                            victoryTitle,
+                            titlePos + new Vector2(x, y),
+                            Color.Black,
+                            0f,
+                            Vector2.Zero,
+                            titleScale,
+                            SpriteEffects.None,
+                            0f
+                        );
+                    }
+                }
+            }
+
+            _spriteBatch.DrawString(
+                instructionFont,
+                victoryTitle,
+                titlePos,
+                Color.Gold,
+                0f,
+                Vector2.Zero,
+                titleScale,
+                SpriteEffects.None,
+                0f
+            );
+
+            // Draw description lines
+            string[] descLines = new string[]
+            {
+                "You have slain the Orc King",
+                "and have found the light!",
+                "",
+                "Press E to Dismiss"
+            };
+
+            float descScale = 1.8f;
+            float lineHeight = instructionFont.LineSpacing * descScale;
+            float startY = titlePos.Y + titleSize.Y + 50;
+
+            foreach (string line in descLines)
+            {
+                if (string.IsNullOrEmpty(line))
+                {
+                    startY += lineHeight * 0.5f;
+                    continue;
+                }
+
+                Vector2 lineSize = instructionFont.MeasureString(line) * descScale;
+                Vector2 linePos = new Vector2(
+                    (viewport.Width - lineSize.X) / 2,
+                    startY
+                );
+
+                // Use different color for the dismiss instruction
+                Color lineColor = line.Contains("Press E") ? Color.Yellow : Color.White;
+
+                // Description outline
+                for (int x = -2; x <= 2; x++)
+                {
+                    for (int y = -2; y <= 2; y++)
+                    {
+                        if (x != 0 || y != 0)
+                        {
+                            _spriteBatch.DrawString(
+                                instructionFont,
+                                line,
+                                linePos + new Vector2(x, y),
+                                Color.Black,
+                                0f,
+                                Vector2.Zero,
+                                descScale,
+                                SpriteEffects.None,
+                                0f
+                            );
+                        }
+                    }
+                }
+
+                _spriteBatch.DrawString(
+                    instructionFont,
+                    line,
+                    linePos,
+                    lineColor,
                     0f,
                     Vector2.Zero,
                     descScale,

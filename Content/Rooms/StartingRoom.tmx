@@ -64,20 +64,18 @@
  <objectgroup id="3" name="Objects">
   <object id="1" name="Vase1" type="Vase" x="397.322" y="80.3779" width="16" height="16">
    <properties>
-    <property name="coinValue" type="int" value="5"/>
-    <property name="health" type="int" value="1"/>
+    <property name="Coin" type="int" value="1"/>
+    <property name="PotionRedMini" type="int" value="1"/>
    </properties>
   </object>
   <object id="16" name="Vase2" type="Vase" x="397.282" y="100.462" width="16" height="16">
    <properties>
-    <property name="coinValue" type="int" value="5"/>
-    <property name="health" type="int" value="1"/>
+    <property name="Coin" type="int" value="2"/>
    </properties>
   </object>
   <object id="17" name="Vase3" type="Vase" x="397.282" y="119.655" width="16" height="16">
    <properties>
-    <property name="coinValue" type="int" value="5"/>
-    <property name="health" type="int" value="1"/>
+    <property name="PotionRed" type="int" value="1"/>
    </properties>
   </object>
   <object id="20" name="Room1" type="Door" x="223.173" y="1.33904" width="49.098">

@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="20" height="20" tilewidth="16" tileheight="16" infinite="0" nextlayerid="5" nextobjectid="34">
+ <tileset firstgid="1" source="../Tilemaps/AllTile.tsx"/>
+ <objectgroup id="4" name="Collision">
+  <object id="9" type="Wall" x="145.591" y="0.374269" width="174.035" height="209.965"/>
+  <object id="10" type="Wall" x="65.4971" y="0" width="14.2222" height="284.819"/>
+  <object id="11" type="Wall" x="74.4795" y="273.216" width="246.269" height="13.4737"/>
+  <object id="12" type="Wall" x="79.7193" y="-15.7193" width="64.3743" height="16.0936"/>
+ </objectgroup>
+ <layer id="1" name="Floor &amp; Walls" width="20" height="20">
+  <data encoding="csv">
+4654,4654,4654,4654,4543,4253,4374,4375,4253,4545,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,
+4654,4654,4654,4654,4655,5048,5049,5049,5050,4653,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,
+4654,4654,4654,4654,4655,5161,4657,4657,5163,4653,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,
+4654,4654,4654,4654,4655,5161,4657,4657,5163,4653,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,
+4654,4654,4654,4654,4655,5161,4657,4657,5163,4653,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,
+4654,4654,4654,4654,4655,5161,4657,4657,5163,4653,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,
+4654,4654,4654,4654,4655,5161,4657,4657,5163,4653,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,
+4654,4654,4654,4654,4655,5161,4657,4657,5163,4653,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,
+4654,4654,4654,4654,4655,5161,4657,4657,5163,4653,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,
+4654,4654,4654,4654,4655,5161,4657,4657,5163,4653,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,
+4654,4654,4654,4654,4655,5166,5167,5167,5168,4653,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,
+4654,4654,4654,4654,4655,5279,5280,5280,5281,4653,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,
+4654,4654,4654,4654,4655,5279,5280,5280,5281,4653,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,
+4654,4654,4654,4654,4655,5279,5280,5280,5281,4766,4767,4767,4767,4767,4767,4767,4767,4767,4767,4767,
+4654,4654,4654,4654,4655,5161,4657,4657,5277,5049,5049,5049,5049,5049,5049,5049,5049,5050,4591,4591,
+4654,4654,4654,4654,4655,5161,4657,4657,4657,4657,4657,4657,4657,4657,4657,4657,4657,5163,4591,4591,
+4654,4654,4654,4654,4655,5274,5275,5275,5275,5275,5275,5275,5275,5275,5275,5275,5275,5276,4591,4591,
+4654,4654,4654,4654,4769,4770,4770,4770,4770,4770,4770,4770,4770,4541,4541,4541,4541,4541,4541,4541,
+4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,
+4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654,4654
+</data>
+ </layer>
+ <layer id="2" name="F&amp;W Decor" width="20" height="20">
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <objectgroup id="3" name="Objects">
+  <object id="4" name="FromBigRoom" type="SpawnPoint" x="292.304" y="253.38">
+   <point/>
+  </object>
+  <object id="5" name="BigRoom" type="Door" x="316.257" y="224.187" width="3.74269" height="48.655"/>
+  <object id="7" name="CrateCluster1" type="Crate" x="208.281" y="264.421" width="16.8421" height="14.5965"/>
+  <object id="3" name="CrateCluster2" type="Crate" x="211.088" y="256.749" width="16.8421" height="14.5965"/>
+  <object id="6" name="TallCrate" type="Crate" x="210.339" y="240.655" width="16.4678" height="16.4678"/>
+  <object id="1" name="TallCrate" type="Crate" x="206.222" y="232.421" width="16.4678" height="16.4678"/>
+  <object id="8" name="CrateCluster1" type="Crate" x="212.398" y="229.614" width="16.8421" height="14.5965"/>
+  <object id="2" name="CrateCluster2" type="Crate" x="206.596" y="222.316" width="16.4678" height="16.4678"/>
+  <object id="13" name="FinalBossRoom" type="Door" x="96.9357" y="0.374269" width="31.4386" height="4.49123"/>
+  <object id="14" name="FromFinalBossRoom" type="SpawnPoint" x="111.906" y="35.5556">
+   <point/>
+  </object>
+  <object id="15" name="Chest" type="Chest" x="168.421" y="230.924">
+   <properties>
+    <property name="Coin" type="int" value="5"/>
+    <property name="PotionRed" type="int" value="2"/>
+    <property name="PotionRedMini" type="int" value="3"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="16" name="ApproachVase" type="Vase" x="136.234" y="24.7018">
+   <properties>
+    <property name="PotionRed" type="int" value="1"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="17" name="ApproachVase" type="Vase" x="88.3275" y="24.7018">
+   <properties>
+    <property name="PotionRedMini" type="int" value="2"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="18" name="CP-FinalBossApproach" type="Button" x="111.532" y="239.906">
+   <point/>
+  </object>
+  <object id="19" name="CP-FinalBossApproach" type="Checkpoint" x="111.532" y="242.901">
+   <point/>
+  </object>
+  <object id="20" name="TorchFront" type="WallTorch" x="288.187" y="215.953">
+   <properties>
+    <property name="Color" value="Blue"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="21" name="TorchFront" type="WallTorch" x="234.667" y="215.579">
+   <properties>
+    <property name="Color" value="Blue"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="22" name="TorchFront" type="WallTorch" x="176.655" y="216.327">
+   <properties>
+    <property name="Color" value="Blue"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="23" name="TorchFront" type="WallTorch" x="136.234" y="3.74269">
+   <properties>
+    <property name="Color" value="Blue"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="24" name="TorchFront" type="WallTorch" x="88.3275" y="4.11696">
+   <properties>
+    <property name="Color" value="Blue"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="25" name="TorchLeft" type="WallTorch" x="86.4561" y="62.8772">
+   <properties>
+    <property name="Color" value="Blue"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="27" name="TorchLeft" type="WallTorch" x="86.8304" y="114.901">
+   <properties>
+    <property name="Color" value="Blue"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="28" name="TorchLeft" type="WallTorch" x="85.3333" y="189.38">
+   <properties>
+    <property name="Color" value="Blue"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="29" name="TorchLeft" type="WallTorch" x="86.4561" y="247.392">
+   <properties>
+    <property name="Color" value="Blue"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="30" name="TorchRight" type="WallTorch" x="137.357" y="63.6257">
+   <properties>
+    <property name="Color" value="Blue"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="32" name="TorchRight" type="WallTorch" x="136.608" y="114.901">
+   <properties>
+    <property name="Color" value="Blue"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="33" name="TorchRight" type="WallTorch" x="138.105" y="189.006">
+   <properties>
+    <property name="Color" value="Blue"/>
+   </properties>
+   <point/>
+  </object>
+ </objectgroup>
+</map>

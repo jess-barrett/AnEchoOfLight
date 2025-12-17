@@ -74,10 +74,12 @@ namespace GameProject2.Managers
             Tilemap tilemap,
             string roomName,
             float tilemapScale,
-            HashSet<string> completedGauntlets)
+            HashSet<string> completedGauntlets,
+            bool orcKingDefeated = false)
         {
             CurrentGauntletRoom = roomName;
             bool gauntletAlreadyCompleted = completedGauntlets.Contains(roomName);
+            bool doorsStartOpen = gauntletAlreadyCompleted || orcKingDefeated;
 
             foreach (var objectLayer in tilemap.ObjectLayers)
             {
@@ -122,9 +124,17 @@ namespace GameProject2.Managers
                     if (obj.Class == "WoodenDoubleDoor")
                     {
                         string doorId = $"{roomName}_{obj.X}_{obj.Y}";
-                        var door = new WoodenDoubleDoor(_doorTexture, pos, tilemapScale, doorId);
 
-                        if (gauntletAlreadyCompleted)
+                        // Check for StartOpen property (door starts open then closes after delay)
+                        bool startOpen = false;
+                        if (obj.Properties.TryGetValue("StartOpen", out string startOpenStr))
+                        {
+                            bool.TryParse(startOpenStr, out startOpen);
+                        }
+
+                        var door = new WoodenDoubleDoor(_doorTexture, pos, tilemapScale, doorId, startOpen);
+
+                        if (doorsStartOpen)
                         {
                             door.SetOpen();
                         }

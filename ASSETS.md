@@ -32,3 +32,4 @@
     - Chest Opening Sound Effect by Benjamin Adams from Pixabay
     - Coin Pickup Sound Effect by freesound_community from Pixabay
     - Potion Pickup Sound Effect by freesound_community from Pixabay
+    - Victory Jingle Sound Effect by u_it78ck90s3 from Pixabay

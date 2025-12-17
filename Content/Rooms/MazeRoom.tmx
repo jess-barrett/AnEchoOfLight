@@ -102,12 +102,16 @@
    <point/>
   </object>
   <object id="26" name="Vase" type="Vase" x="183.579" y="352">
+   <properties>
+    <property name="Coin" type="int" value="1"/>
+    <property name="PotionRedMini" type="int" value="1"/>
+   </properties>
    <point/>
   </object>
   <object id="27" name="Chest" type="Chest" x="319.439" y="288">
    <properties>
     <property name="Coin" type="int" value="3"/>
-    <property name="Potion" value="Red"/>
+    <property name="PotionRed" type="int" value="1"/>
    </properties>
    <point/>
   </object>
@@ -145,9 +149,17 @@
    <point/>
   </object>
   <object id="39" name="Chest" type="Chest" x="55.5789" y="54.4561">
+   <properties>
+    <property name="Coin" type="int" value="3"/>
+    <property name="PotionRed" type="int" value="1"/>
+   </properties>
    <point/>
   </object>
   <object id="40" name="Vase" type="Vase" x="55.5789" y="265.544">
+   <properties>
+    <property name="Coin" type="int" value="1"/>
+    <property name="PotionRedMini" type="int" value="1"/>
+   </properties>
    <point/>
   </object>
   <object id="41" name="Skull" type="Skull" x="416" y="80.2807">
@@ -169,6 +181,9 @@
    <point/>
   </object>
   <object id="47" name="Vase" type="Vase" x="320" y="52.2105">
+   <properties>
+    <property name="PotionRedMini" type="int" value="1"/>
+   </properties>
    <point/>
   </object>
   <object id="48" name="TorchFront" type="WallTorch" x="200.421" y="387.93">

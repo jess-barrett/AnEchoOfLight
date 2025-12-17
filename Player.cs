@@ -301,7 +301,7 @@ namespace GameProject2
             {
                 Animation.Update(gameTime);
 
-                int attackStartFrame = 1;
+                int attackStartFrame = 0;
                 int attackEndFrame = 3;
 
                 if (Animation.CurrentFrameIndex >= attackStartFrame && Animation.CurrentFrameIndex <= attackEndFrame)

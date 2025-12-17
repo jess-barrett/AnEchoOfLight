@@ -22,7 +22,9 @@ namespace GameProject2.Managers
         private static List<PillarTorch> _pillarTorches = new List<PillarTorch>();
         private static List<WallTorch> _wallTorches = new List<WallTorch>();
         private static List<Totem> _totems = new List<Totem>();
+        private static List<Crate> _crates = new List<Crate>();
         private static Trophy _trophy;
+        private static OrcBoss _orcBoss;
 
         // Public read-only accessors
         public static IReadOnlyList<IEnemy> Enemies => _enemies;
@@ -34,7 +36,9 @@ namespace GameProject2.Managers
         public static IReadOnlyList<PillarTorch> PillarTorches => _pillarTorches;
         public static IReadOnlyList<WallTorch> WallTorches => _wallTorches;
         public static IReadOnlyList<Totem> Totems => _totems;
+        public static IReadOnlyList<Crate> Crates => _crates;
         public static Trophy Trophy => _trophy;
+        public static OrcBoss OrcBoss => _orcBoss;
 
         // Texture cache (loaded once, reused)
         private static Texture2D _vaseTexture;
@@ -48,6 +52,17 @@ namespace GameProject2.Managers
         private static Texture2D _blueSlimeSheet;
         private static Texture2D _woodenDoubleDoorTexture;
         private static Texture2D _wallTorchTexture;
+
+        // Orc boss textures
+        private static Texture2D _orcIdleTexture;
+        private static Texture2D _orcWalkTexture;
+        private static Texture2D _orcRunTexture;
+        private static Texture2D _orcAttackTexture;
+        private static Texture2D _orcWalkAttackTexture;
+        private static Texture2D _orcRunAttackTexture;
+        private static Texture2D _orcHurtTexture;
+        private static Texture2D _orcDeathTexture;
+        private static Texture2D _cratesTexture;
 
         // Load all entity textures
         public static void LoadContent(ContentManager content)
@@ -63,6 +78,17 @@ namespace GameProject2.Managers
             _blueSlimeSheet = content.Load<Texture2D>("Enemies/Blue Slime");
             _woodenDoubleDoorTexture = content.Load<Texture2D>("Interactables/WoodenDoubleDoor");
             _wallTorchTexture = content.Load<Texture2D>("Torches");
+
+            // Load Orc boss textures
+            _orcIdleTexture = content.Load<Texture2D>("Orc/orc_idle");
+            _orcWalkTexture = content.Load<Texture2D>("Orc/orc_walk");
+            _orcRunTexture = content.Load<Texture2D>("Orc/orc_run");
+            _orcAttackTexture = content.Load<Texture2D>("Orc/orc_attack");
+            _orcWalkAttackTexture = content.Load<Texture2D>("Orc/orc_walk_attack");
+            _orcRunAttackTexture = content.Load<Texture2D>("Orc/orc_run_attack");
+            _orcHurtTexture = content.Load<Texture2D>("Orc/orc_hurt");
+            _orcDeathTexture = content.Load<Texture2D>("Orc/orc_death");
+            _cratesTexture = content.Load<Texture2D>("Interactables/Crates");
 
             // Initialize GauntletManager with textures
             GauntletManager.LoadContent(_totemTexture, _woodenDoubleDoorTexture);
@@ -80,7 +106,9 @@ namespace GameProject2.Managers
             _pillarTorches.Clear();
             _wallTorches.Clear();
             _totems.Clear();
+            _crates.Clear();
             _trophy = null;
+            _orcBoss = null;
         }
 
         // Unified spawning from tilemap (eliminates duplication between Activate and LoadRoom)
@@ -90,10 +118,12 @@ namespace GameProject2.Managers
             float tilemapScale,
             Dictionary<string, HashSet<string>> destroyedVases,
             Dictionary<string, HashSet<string>> openedChests,
+            Dictionary<string, HashSet<string>> destroyedCrates,
             HashSet<string> activatedTotems,
             string lastCheckpointName,
             string lastCheckpointRoom,
-            GraphicsDevice graphicsDevice)
+            GraphicsDevice graphicsDevice,
+            bool orcKingDefeated = false)
         {
             foreach (var objectLayer in tilemap.ObjectLayers)
             {
@@ -106,7 +136,7 @@ namespace GameProject2.Managers
                     switch (obj.Class)
                     {
                         case "Vase":
-                            SpawnVase(pos, obj, roomName, destroyedVases);
+                            SpawnVase(pos, obj, roomName, destroyedVases, orcKingDefeated);
                             break;
                         case "Skull":
                             SpawnSkull(pos);
@@ -143,6 +173,12 @@ namespace GameProject2.Managers
                         case "WallTorch":
                             SpawnWallTorch(pos, obj, tilemapScale);
                             break;
+                        case "OrcBoss":
+                            SpawnOrcBoss(pos, obj, orcKingDefeated);
+                            break;
+                        case "Crate":
+                            SpawnCrate(pos, obj, roomName, destroyedCrates);
+                            break;
                     }
                 }
             }
@@ -158,8 +194,15 @@ namespace GameProject2.Managers
 
         // Individual spawn methods
         private static void SpawnVase(Vector2 pos, TiledObject obj, string roomName,
-            Dictionary<string, HashSet<string>> destroyedVases)
+            Dictionary<string, HashSet<string>> destroyedVases, bool orcKingDefeated = false)
         {
+            // Skip BossVase if the Orc King has been defeated
+            if (obj.Name == "BossVase" && orcKingDefeated)
+            {
+                System.Diagnostics.Debug.WriteLine($"Skipped BossVase (boss defeated) in room {roomName}");
+                return;
+            }
+
             string vaseId = $"{obj.X}_{obj.Y}";
 
             if (!destroyedVases.ContainsKey(roomName))
@@ -169,6 +212,27 @@ namespace GameProject2.Managers
             {
                 var vase = new Vase(_vaseTexture, pos, 16, 8);
                 vase.VaseId = vaseId;
+                vase.VaseName = obj.Name;  // Store name for persistence check (e.g., "ApproachVase")
+
+                // Read drop counts from Tiled properties
+                if (obj.Properties.TryGetValue("Coin", out string coinStr))
+                {
+                    if (int.TryParse(coinStr, out int coinCount))
+                        vase.CoinDropCount = coinCount;
+                }
+
+                if (obj.Properties.TryGetValue("PotionRed", out string redStr))
+                {
+                    if (int.TryParse(redStr, out int redCount))
+                        vase.PotionRedDropCount = redCount;
+                }
+
+                if (obj.Properties.TryGetValue("PotionRedMini", out string redMiniStr))
+                {
+                    if (int.TryParse(redMiniStr, out int redMiniCount))
+                        vase.PotionRedMiniDropCount = redMiniCount;
+                }
+
                 _vases.Add(vase);
                 System.Diagnostics.Debug.WriteLine($"Spawned vase {vaseId} in room {roomName}");
             }
@@ -293,27 +357,38 @@ namespace GameProject2.Managers
             System.Diagnostics.Debug.WriteLine($"Loading chest at {pos}, Properties count: {obj.Properties.Count}");
 
             var items = new List<string>();
-            foreach (var prop in obj.Properties)
+
+            // Check for PotionRed (int count)
+            if (obj.Properties.TryGetValue("PotionRed", out string redPotionStr))
             {
-                string itemType = prop.Key;
-                string itemValue = prop.Value;
-
-                System.Diagnostics.Debug.WriteLine($"  Property: {itemType} = {itemValue}");
-
-                if (itemType == "Potion")
+                if (int.TryParse(redPotionStr, out int redCount))
                 {
-                    items.Add($"Potion.{itemValue}");
-                    System.Diagnostics.Debug.WriteLine($"  Added item: Potion.{itemValue}");
-                }
-                else if (itemType == "Coin")
-                {
-                    // Parse coin count from value (e.g., "3" means 3 coins)
-                    int coinCount = 1;
-                    if (int.TryParse(itemValue, out int parsed))
+                    for (int i = 0; i < redCount; i++)
                     {
-                        coinCount = parsed;
+                        items.Add("Potion.Red");
                     }
+                    System.Diagnostics.Debug.WriteLine($"  Added {redCount} Red potions");
+                }
+            }
 
+            // Check for PotionRedMini (int count)
+            if (obj.Properties.TryGetValue("PotionRedMini", out string redMiniStr))
+            {
+                if (int.TryParse(redMiniStr, out int redMiniCount))
+                {
+                    for (int i = 0; i < redMiniCount; i++)
+                    {
+                        items.Add("Potion.RedMini");
+                    }
+                    System.Diagnostics.Debug.WriteLine($"  Added {redMiniCount} RedMini potions");
+                }
+            }
+
+            // Check for Coin (int count)
+            if (obj.Properties.TryGetValue("Coin", out string coinStr))
+            {
+                if (int.TryParse(coinStr, out int coinCount))
+                {
                     for (int i = 0; i < coinCount; i++)
                     {
                         items.Add("Coin");
@@ -338,6 +413,87 @@ namespace GameProject2.Managers
         private static void SpawnTrophy(Vector2 pos, GraphicsDevice graphicsDevice)
         {
             _trophy = new Trophy(graphicsDevice, pos);
+        }
+
+        private static void SpawnOrcBoss(Vector2 pos, TiledObject obj, bool alreadyDefeated)
+        {
+            // Get max health from properties, default to 1500
+            int maxHealth = 1500;
+            if (obj.Properties.TryGetValue("Health", out string healthStr))
+            {
+                int.TryParse(healthStr, out maxHealth);
+            }
+
+            _orcBoss = new OrcBoss(
+                _orcIdleTexture,
+                _orcWalkTexture,
+                _orcRunTexture,
+                _orcAttackTexture,
+                _orcWalkAttackTexture,
+                _orcRunAttackTexture,
+                _orcHurtTexture,
+                _orcDeathTexture,
+                pos,
+                maxHealth
+            );
+
+            // If boss was already defeated, set it as dead on last frame
+            if (alreadyDefeated)
+            {
+                _orcBoss.SetAsDefeated();
+                System.Diagnostics.Debug.WriteLine($"Spawned defeated OrcBoss at {pos} (already dead)");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"Spawned OrcBoss at {pos} with {maxHealth} HP");
+            }
+
+            // Also add to enemies list so player attacks can hit it
+            _enemies.Add(_orcBoss);
+        }
+
+        private static void SpawnCrate(Vector2 pos, TiledObject obj, string roomName, Dictionary<string, HashSet<string>> destroyedCrates)
+        {
+            // Determine crate type from Name property
+            CrateType crateType = CrateType.CrateCluster1; // default
+            int health = 3; // default health - takes 3 Attack2 hits to destroy
+
+            switch (obj.Name)
+            {
+                case "TallCrate":
+                    crateType = CrateType.TallCrate;
+                    break;
+                case "CrateCluster1":
+                    crateType = CrateType.CrateCluster1;
+                    break;
+                case "CrateCluster2":
+                    crateType = CrateType.CrateCluster2;
+                    break;
+            }
+
+            // Override health from properties if specified
+            if (obj.Properties.TryGetValue("Health", out string healthStr))
+            {
+                int.TryParse(healthStr, out health);
+            }
+
+            string crateId = $"{obj.X}_{obj.Y}";
+
+            // Check if this crate was already destroyed
+            if (!destroyedCrates.ContainsKey(roomName))
+                destroyedCrates[roomName] = new HashSet<string>();
+
+            if (destroyedCrates[roomName].Contains(crateId))
+            {
+                System.Diagnostics.Debug.WriteLine($"Skipped destroyed crate {crateId} in room {roomName}");
+                return; // Don't spawn destroyed crates
+            }
+
+            var crate = new Crate(_cratesTexture, pos, crateType, RoomManager.TilemapScale, health);
+            crate.CrateId = crateId;
+            _crates.Add(crate);
+
+            System.Diagnostics.Debug.WriteLine($"Spawned Crate '{obj.Name}' at {pos} with {health} HP");
         }
 
         private static void SpawnTotem(Vector2 pos, TiledObject obj, string roomName,
@@ -377,8 +533,8 @@ namespace GameProject2.Managers
                 enemy.Update(gameTime, player, collisionBoxes);
             }
 
-            // Remove enemies that have finished their death animation
-            _enemies.RemoveAll(e => e.IsDeathAnimationComplete);
+            // Remove enemies that have finished their death animation (except OrcBoss - stays on last frame)
+            _enemies.RemoveAll(e => e.IsDeathAnimationComplete && e != _orcBoss);
 
             foreach (var vase in _vases)
                 vase.Update(gameTime);
@@ -404,6 +560,9 @@ namespace GameProject2.Managers
             foreach (var totem in _totems)
                 totem.Update(gameTime);
 
+            foreach (var crate in _crates)
+                crate.Update(gameTime);
+
             _trophy?.Update(gameTime);
         }
 
@@ -412,6 +571,22 @@ namespace GameProject2.Managers
         public static void RemoveVase(Vase vase) => _vases.Remove(vase);
         public static void RemoveCoin(Coin coin) => _coins.Remove(coin);
         public static void RemovePotion(Potion potion) => _potions.Remove(potion);
+        public static void RemoveCrate(Crate crate) => _crates.Remove(crate);
+
+        // Get crate collision boxes for player movement blocking
+        public static List<Rectangle> GetCrateCollisionBoxes()
+        {
+            var boxes = new List<Rectangle>();
+            foreach (var crate in _crates)
+            {
+                if (!crate.IsDestroyed)
+                {
+                    boxes.Add(crate.Hitbox);
+                }
+            }
+            System.Diagnostics.Debug.WriteLine($"GetCrateCollisionBoxes: {boxes.Count} boxes from {_crates.Count} crates");
+            return boxes;
+        }
 
         // Get mutable lists for direct modification
         // Returns the actual list for player attack damage system

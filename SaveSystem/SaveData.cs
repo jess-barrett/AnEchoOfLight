@@ -18,6 +18,7 @@ namespace GameProject2.SaveSystem
         public float SfxVolume { get; set; }
         public Dictionary<string, List<string>> DestroyedVases { get; set; } = new Dictionary<string, List<string>>();
         public Dictionary<string, List<string>> OpenedChests { get; set; } = new Dictionary<string, List<string>>();
+        public Dictionary<string, List<string>> DestroyedCrates { get; set; } = new Dictionary<string, List<string>>();
 
         // Ability unlocks
         public bool HasAttack2 { get; set; } = false;
@@ -32,6 +33,9 @@ namespace GameProject2.SaveSystem
 
         // Completed gauntlets (room names)
         public List<string> CompletedGauntlets { get; set; } = new List<string>();
+
+        // Boss defeated state
+        public bool OrcKingDefeated { get; set; } = false;
 
         public static void Save(SaveData data, string filename = "savegame.json")
         {

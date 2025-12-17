@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="29" height="30" tilewidth="16" tileheight="16" infinite="0" nextlayerid="6" nextobjectid="26">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="29" height="30" tilewidth="16" tileheight="16" infinite="0" nextlayerid="6" nextobjectid="27">
  <tileset firstgid="1" source="../Tilemaps/Dungeon_1.tsx"/>
  <tileset firstgid="561" source="../Tilemaps/Water.tsx"/>
  <tileset firstgid="649" source="../Tilemaps/AllTile.tsx"/>
@@ -130,7 +130,7 @@
    <point/>
   </object>
   <object id="8" name="WormRoom" type="Door" x="459.789" y="207.719" width="3.36842" height="47.7193"/>
-  <object id="9" type="Wall" x="0.561404" y="207.719" width="4.49123" height="47.7193"/>
+  <object id="9" name="FinalBossApproach" type="Door" x="0.561404" y="207.719" width="4.49123" height="47.7193"/>
   <object id="10" name="MazeRoom" type="Door" x="207.719" y="1.12281" width="48.8421" height="3.36842"/>
   <object id="11" name="DashGauntlet" type="Door" x="207.158" y="477.754" width="49.4035" height="1.68421"/>
   <object id="12" name="FromMazeRoom" type="SpawnPoint" x="231.86" y="43.228">
@@ -139,13 +139,22 @@
   <object id="13" name="FromDashGauntlet" type="SpawnPoint" x="232.421" y="454.737">
    <point/>
   </object>
-  <object id="14" name="From" type="SpawnPoint" x="26.386" y="241.965">
+  <object id="14" name="FromFinalBossApproach" type="SpawnPoint" x="26.9474" y="232.983">
    <point/>
   </object>
   <object id="23" name="Chest" type="Chest" x="119.579" y="213.894">
    <properties>
     <property name="Coin" type="int" value="2"/>
-    <property name="Potion" value="RedMini"/>
+    <property name="PotionRed" value="1"/>
+    <property name="PotionRedMini" type="int" value="2"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="26" name="Chest" type="Chest" x="344.14" y="215.579">
+   <properties>
+    <property name="Coin" type="int" value="2"/>
+    <property name="PotionRed" value="1"/>
+    <property name="PotionRedMini" type="int" value="2"/>
    </properties>
    <point/>
   </object>
