@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="30" height="30" tilewidth="16" tileheight="16" infinite="0" nextlayerid="5" nextobjectid="50">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="30" height="30" tilewidth="16" tileheight="16" infinite="0" nextlayerid="5" nextobjectid="128">
  <tileset firstgid="1" source="../Tilemaps/AllTile.tsx"/>
  <objectgroup id="4" name="Collision">
   <object id="1" type="Wall" x="24.7018" y="13.4737" width="429.474" height="2.24561"/>
@@ -98,7 +98,7 @@
    <point/>
   </object>
   <object id="24" name="BigRoom" type="Door" x="223.439" y="476.632" width="47.7193" height="2.24561"/>
-  <object id="25" name="FromBigRoom" type="SpawnPoint" x="247.579" y="469.333">
+  <object id="25" name="FromBigRoom" type="SpawnPoint" x="247.579" y="450.246">
    <point/>
   </object>
   <object id="26" name="Vase" type="Vase" x="183.579" y="352">
@@ -114,7 +114,7 @@
   <object id="28" name="Skull" type="Skull" x="423.86" y="294.737">
    <point/>
   </object>
-  <object id="29" type="BlueSlime" x="421.053" y="422.175">
+  <object id="29" name="BlueSlime" type="BlueSlime" x="421.053" y="422.175">
    <point/>
   </object>
   <object id="30" type="BlueSlime" x="185.263" y="295.86">
@@ -171,15 +171,459 @@
   <object id="47" name="Vase" type="Vase" x="320" y="52.2105">
    <point/>
   </object>
-  <object id="48" name="TorchFront" type="WallTorch" x="192" y="385.123">
+  <object id="48" name="TorchFront" type="WallTorch" x="200.421" y="387.93">
    <properties>
     <property name="Color" value="Orange"/>
    </properties>
    <point/>
   </object>
-  <object id="49" name="TorchFront" type="WallTorch" x="288" y="386.246">
+  <object id="49" name="TorchFront" type="WallTorch" x="296.421" y="388.491">
    <properties>
     <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="50" name="TorchFront" type="WallTorch" x="184.702" y="261.053">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="51" name="TorchFront" type="WallTorch" x="247.579" y="259.93">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="52" name="TorchFront" type="WallTorch" x="304.281" y="261.614">
+   <properties>
+    <property name="Color" value="Green"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="53" name="TorchFront" type="WallTorch" x="336.281" y="261.614">
+   <properties>
+    <property name="Color" value="Green"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="54" name="TorchFront" type="WallTorch" x="423.86" y="261.614">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="55" name="TorchFront" type="WallTorch" x="376.14" y="387.93">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="56" name="TorchFront" type="WallTorch" x="152.14" y="388.491">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="57" name="TorchFront" type="WallTorch" x="104.421" y="387.93">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="58" name="TorchFront" type="WallTorch" x="55.0175" y="309.333">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="59" name="TorchFront" type="WallTorch" x="120.14" y="181.333">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="60" name="TorchFront" type="WallTorch" x="232.421" y="180.211">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="61" name="TorchFront" type="WallTorch" x="295.86" y="180.211">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="62" name="TorchFront" type="WallTorch" x="360.421" y="180.211">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="63" name="TorchFront" type="WallTorch" x="416" y="21.8947">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="64" name="TorchFront" type="WallTorch" x="376.702" y="20.7719">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="65" name="TorchFront" type="WallTorch" x="336.281" y="21.3333">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="66" name="TorchFront" type="WallTorch" x="295.86" y="101.614">
+   <properties>
+    <property name="Color" value="Blue"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="67" name="TorchFront" type="WallTorch" x="280.702" y="22.4561">
+   <properties>
+    <property name="Color" value="Blue"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="68" name="TorchFront" type="WallTorch" x="232.421" y="21.8947">
+   <properties>
+    <property name="Color" value="Blue"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="69" name="TorchFront" type="WallTorch" x="184.14" y="21.8947">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="70" name="TorchFront" type="WallTorch" x="120.702" y="21.3333">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="71" name="TorchFront" type="WallTorch" x="87.5789" y="101.614">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="72" name="TorchFront" type="WallTorch" x="72.4211" y="21.8947">
+   <properties>
+    <property name="Color" value="Green"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="73" name="TorchFront" type="WallTorch" x="40.9825" y="21.3333">
+   <properties>
+    <property name="Color" value="Green"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="74" name="TorchLeft" type="WallTorch" x="231.86" y="330.105">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="75" name="TorchLeft" type="WallTorch" x="39.8596" y="425.544">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="76" name="TorchLeft" type="WallTorch" x="167.86" y="344.702">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="77" name="TorchLeft" type="WallTorch" x="167.298" y="296.982">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="78" name="TorchLeft" type="WallTorch" x="295.86" y="297.544">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="79" name="TorchLeft" type="WallTorch" x="294.737" y="330.667">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="80" name="TorchLeft" type="WallTorch" x="408.14" y="331.228">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="81" name="TorchLeft" type="WallTorch" x="407.018" y="377.825">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="82" name="TorchLeft" type="WallTorch" x="231.86" y="384.561">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="83" name="TorchLeft" type="WallTorch" x="39.8596" y="361.544">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="84" name="TorchLeft" type="WallTorch" x="103.298" y="299.228">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="85" name="TorchLeft" type="WallTorch" x="102.737" y="249.263">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="86" name="TorchLeft" type="WallTorch" x="102.737" y="202.105">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="87" name="TorchLeft" type="WallTorch" x="39.2982" y="241.404">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="88" name="TorchLeft" type="WallTorch" x="38.7368" y="174.035">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="89" name="TorchLeft" type="WallTorch" x="39.2982" y="105.544">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="90" name="TorchLeft" type="WallTorch" x="103.86" y="72.4211">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="91" name="TorchLeft" type="WallTorch" x="166.175" y="96.5614">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="92" name="TorchLeft" type="WallTorch" x="166.737" y="160.561">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="93" name="TorchLeft" type="WallTorch" x="231.298" y="64">
+   <properties>
+    <property name="Color" value="Blue"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="94" name="TorchLeft" type="WallTorch" x="231.298" y="91.5088">
+   <properties>
+    <property name="Color" value="Blue"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="95" name="TorchLeft" type="WallTorch" x="231.86" y="122.386">
+   <properties>
+    <property name="Color" value="Blue"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="96" name="TorchLeft" type="WallTorch" x="231.86" y="147.088">
+   <properties>
+    <property name="Color" value="Blue"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="97" name="TorchLeft" type="WallTorch" x="312.14" y="97.6842">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="98" name="TorchLeft" type="WallTorch" x="312.14" y="63.4386">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="99" name="TorchLeft" type="WallTorch" x="392.421" y="96">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="100" name="TorchLeft" type="WallTorch" x="391.86" y="136.421">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="101" name="TorchLeft" type="WallTorch" x="391.86" y="178.526">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="102" name="TorchRight" type="WallTorch" x="263.298" y="289.123">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="107" name="TorchRight" type="WallTorch" x="263.86" y="330.667">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="108" name="TorchRight" type="WallTorch" x="264.421" y="384.561">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="109" name="TorchRight" type="WallTorch" x="440.702" y="377.263">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="110" name="TorchRight" type="WallTorch" x="440.14" y="330.667">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="111" name="TorchRight" type="WallTorch" x="377.263" y="346.386">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="112" name="TorchRight" type="WallTorch" x="73.5439" y="384.561">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="113" name="TorchRight" type="WallTorch" x="136.982" y="347.509">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="114" name="TorchRight" type="WallTorch" x="135.86" y="299.789">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="115" name="TorchRight" type="WallTorch" x="135.86" y="250.386">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="116" name="TorchRight" type="WallTorch" x="200.982" y="161.123">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="117" name="TorchRight" type="WallTorch" x="200.421" y="96.5614">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="118" name="TorchRight" type="WallTorch" x="135.86" y="143.158">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="119" name="TorchRight" type="WallTorch" x="136.421" y="97.1228">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="120" name="TorchRight" type="WallTorch" x="71.8596" y="173.474">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="121" name="TorchRight" type="WallTorch" x="71.8596" y="240.842">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="122" name="TorchRight" type="WallTorch" x="440.14" y="178.526">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="123" name="TorchRight" type="WallTorch" x="440.14" y="136.421">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="124" name="TorchRight" type="WallTorch" x="440.702" y="60.6316">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="125" name="TorchRight" type="WallTorch" x="360.982" y="136.982">
+   <properties>
+    <property name="Color" value="Orange"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="126" name="TorchRight" type="WallTorch" x="280.702" y="63.4386">
+   <properties>
+    <property name="Color" value="Blue"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="127" name="TorchRight" type="WallTorch" x="280.14" y="91.5088">
+   <properties>
+    <property name="Color" value="Blue"/>
    </properties>
    <point/>
   </object>

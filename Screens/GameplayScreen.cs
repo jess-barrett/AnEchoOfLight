@@ -62,6 +62,10 @@ namespace GameProject2.Screens
         private float demoMessageTimer = 0f;
         private float demoMessageDuration = 5f;
 
+        // Darkness overlay for MazeRoom
+        private Texture2D darknessTexture;
+        private float darknessRadius = 40f; // Radius of light around player (very tight)
+
         public GameplayScreen()
         {
             TransitionOnTime = TimeSpan.FromSeconds(1.0);
@@ -77,6 +81,9 @@ namespace GameProject2.Screens
 
             fadeTexture = new Texture2D(ScreenManager.GraphicsDevice, 1, 1);
             fadeTexture.SetData(new[] { Color.Black });
+
+            // Create darkness texture for MazeRoom
+            CreateDarknessTexture();
 
             AudioManager.PlayGameplayMusicWithIntro();
 
@@ -1068,6 +1075,17 @@ namespace GameProject2.Screens
                 RasterizerState.CullNone
             );
 
+            // Draw darkness overlay for MazeRoom
+            if (RoomManager.CurrentRoom == "MazeRoom")
+            {
+                var vp = ScreenManager.GraphicsDevice.Viewport;
+                // Calculate player's actual screen position based on camera offset
+                // When camera is clamped at edges, player moves away from center
+                Vector2 screenCenter = new Vector2(vp.Width / 2f, vp.Height / 2f);
+                Vector2 playerScreenPos = screenCenter + (player.Position - camera.Position);
+                DrawDarknessOverlay(playerScreenPos);
+            }
+
             // Draw instruction text
             if (instructionTimer > 0)
             {
@@ -1373,6 +1391,90 @@ namespace GameProject2.Screens
             spriteBatch.Draw(pixelTexture,
                 new Rectangle((int)start.X, (int)start.Y, (int)edge.Length(), (int)thickness),
                 null, color, angle, Vector2.Zero, SpriteEffects.None, 0);
+        }
+
+        private void CreateDarknessTexture()
+        {
+            // Create a texture large enough to cover the screen with a radial gradient
+            int size = 1024; // Large enough for most screens
+            darknessTexture = new Texture2D(ScreenManager.GraphicsDevice, size, size);
+
+            Color[] data = new Color[size * size];
+            Vector2 center = new Vector2(size / 2f, size / 2f);
+            float maxRadius = size / 2f;
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float distance = Vector2.Distance(new Vector2(x, y), center);
+                    float normalizedDistance = distance / maxRadius;
+
+                    // Create smooth falloff from center (transparent) to edge (opaque black)
+                    float alpha = MathHelper.Clamp(normalizedDistance, 0f, 1f);
+                    // Apply smoothstep for nicer falloff
+                    alpha = alpha * alpha * (3f - 2f * alpha);
+
+                    data[y * size + x] = new Color(0, 0, 0, alpha);
+                }
+            }
+
+            darknessTexture.SetData(data);
+        }
+
+        private void DrawDarknessOverlay(Vector2 playerScreenPos)
+        {
+            var viewport = ScreenManager.GraphicsDevice.Viewport;
+
+            // Calculate the size of the light circle on screen
+            float lightSize = darknessRadius * 2 * RoomManager.TilemapScale;
+
+            // Draw darkness around the player
+            // We draw 4 rectangles around the light circle to cover the screen
+
+            // First, draw the radial gradient centered on player
+            Rectangle lightRect = new Rectangle(
+                (int)(playerScreenPos.X - lightSize),
+                (int)(playerScreenPos.Y - lightSize),
+                (int)(lightSize * 2),
+                (int)(lightSize * 2)
+            );
+
+            _spriteBatch.Draw(
+                darknessTexture,
+                lightRect,
+                Color.White
+            );
+
+            // Now fill in the rest of the screen with solid black
+            // Top
+            if (lightRect.Top > 0)
+            {
+                _spriteBatch.Draw(fadeTexture,
+                    new Rectangle(0, 0, viewport.Width, lightRect.Top),
+                    Color.Black);
+            }
+            // Bottom
+            if (lightRect.Bottom < viewport.Height)
+            {
+                _spriteBatch.Draw(fadeTexture,
+                    new Rectangle(0, lightRect.Bottom, viewport.Width, viewport.Height - lightRect.Bottom),
+                    Color.Black);
+            }
+            // Left
+            if (lightRect.Left > 0)
+            {
+                _spriteBatch.Draw(fadeTexture,
+                    new Rectangle(0, lightRect.Top, lightRect.Left, lightRect.Height),
+                    Color.Black);
+            }
+            // Right
+            if (lightRect.Right < viewport.Width)
+            {
+                _spriteBatch.Draw(fadeTexture,
+                    new Rectangle(lightRect.Right, lightRect.Top, viewport.Width - lightRect.Right, lightRect.Height),
+                    Color.Black);
+            }
         }
     }
 }
