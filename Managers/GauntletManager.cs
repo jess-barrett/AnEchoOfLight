@@ -132,7 +132,14 @@ namespace GameProject2.Managers
                             bool.TryParse(startOpenStr, out startOpen);
                         }
 
-                        var door = new WoodenDoubleDoor(_doorTexture, pos, tilemapScale, doorId, startOpen);
+                        // Check for CloseDelay property (custom delay before door closes)
+                        float closeDelay = -1f;
+                        if (obj.Properties.TryGetValue("CloseDelay", out string closeDelayStr))
+                        {
+                            float.TryParse(closeDelayStr, out closeDelay);
+                        }
+
+                        var door = new WoodenDoubleDoor(_doorTexture, pos, tilemapScale, doorId, startOpen, closeDelay);
 
                         if (doorsStartOpen)
                         {
@@ -330,30 +337,24 @@ namespace GameProject2.Managers
             System.Diagnostics.Debug.WriteLine($"Spawned {totem.EnemyType} from totem at {spawnPos.Value}");
         }
 
-        // Get collision boxes, excluding open door colliders
-        public static List<Rectangle> FilterCollisionBoxes(List<Rectangle> originalBoxes)
+        // Get collision boxes, removing door colliders when boss is defeated
+        public static List<Rectangle> FilterCollisionBoxes(List<Rectangle> originalBoxes, bool bossDefeated = false)
         {
-            if (State != GauntletState.Completed)
+            // If no door colliders registered or boss not defeated, return original boxes
+            if (_doorColliders.Count == 0 || !bossDefeated)
                 return originalBoxes;
 
-            // Remove door colliders when doors are open
-            var filtered = new List<Rectangle>(originalBoxes);
+            // Boss is defeated - remove the door colliders so player can exit
+            var result = new List<Rectangle>(originalBoxes);
 
-            foreach (var door in _doors)
+            foreach (var colliderRect in _doorColliders.Values)
             {
-                if (door.IsOpen)
-                {
-                    // Find and remove matching colliders
-                    foreach (var colliderRect in _doorColliders.Values)
-                    {
-                        filtered.RemoveAll(r => r == colliderRect ||
-                            (r.X == colliderRect.X && r.Y == colliderRect.Y &&
-                             r.Width == colliderRect.Width && r.Height == colliderRect.Height));
-                    }
-                }
+                result.RemoveAll(r => r == colliderRect ||
+                    (r.X == colliderRect.X && r.Y == colliderRect.Y &&
+                     r.Width == colliderRect.Width && r.Height == colliderRect.Height));
             }
 
-            return filtered;
+            return result;
         }
 
         /// <summary>

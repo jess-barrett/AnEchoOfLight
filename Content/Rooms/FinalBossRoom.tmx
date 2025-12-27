@@ -7,6 +7,7 @@
   <object id="13" type="Wall" x="321.248" y="-1.43942" width="13.9151" height="322.447"/>
   <object id="14" type="Wall" x="12.4756" y="305.173" width="146.349" height="14.395"/>
   <object id="15" type="Wall" x="193.132" y="305.653" width="146.349" height="14.395"/>
+  <object id="5" name="WoodenDoubleDoorCollider" type="Wall" x="158.824" y="304.214" width="33.5882" height="1.91933"/>
  </objectgroup>
  <layer id="1" name="Floor &amp; Walls" width="21" height="20">
   <data encoding="csv">
@@ -83,6 +84,7 @@
  <objectgroup id="3" name="Objects">
   <object id="1" name="WoodenDoubleDoor" type="WoodenDoubleDoor" x="159.784" y="287.899" width="31.6689" height="15.8345">
    <properties>
+    <property name="CloseDelay" type="float" value="0.5"/>
     <property name="StartOpen" type="bool" value="true"/>
    </properties>
   </object>
@@ -92,11 +94,10 @@
    </properties>
    <point/>
   </object>
-  <object id="3" name="FromFinalBossApproach" type="SpawnPoint" x="175.619" y="295.577">
+  <object id="3" name="FromFinalBossApproach" type="SpawnPoint" x="175.619" y="286.46">
    <point/>
   </object>
   <object id="4" name="FinalBossApproach" type="Door" x="159.304" y="317.649" width="32.6286" height="1.4395"/>
-  <object id="5" name="WoodenDoubleDoorCollider" type="WoodenDoubleDoorCollider" x="158.824" y="304.214" width="33.5882" height="1.91933"/>
   <object id="6" name="BossVase" type="Vase" x="279.742" y="261.988">
    <properties>
     <property name="PotionRedMini" value="1"/>

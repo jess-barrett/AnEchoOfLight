@@ -32,8 +32,11 @@ namespace GameProject2
 
         // StartOpen feature - door starts open and closes after delay
         public bool StartOpen { get; set; } = false;
-        private float closeDelay = 1.5f; // Seconds to wait before closing
+        private float closeDelay = 1.5f; // Seconds to wait before closing (default)
         private float closeDelayTimer = 0f;
+
+        // Property to check if door is fully closed (for collision purposes)
+        public bool IsClosed => State == DoorState.Closed;
 
         // Collision rectangle (provided from Tiled)
         public Rectangle CollisionRect { get; set; }
@@ -51,13 +54,19 @@ namespace GameProject2
             }
         }
 
-        public WoodenDoubleDoor(Texture2D doorTexture, Vector2 position, float scale, string doorId, bool startOpen = false)
+        public WoodenDoubleDoor(Texture2D doorTexture, Vector2 position, float scale, string doorId, bool startOpen = false, float customCloseDelay = -1f)
         {
             this.texture = doorTexture;
             this.Position = position;
             this.scale = scale;
             this.DoorId = doorId;
             this.StartOpen = startOpen;
+
+            // Use custom close delay if provided, otherwise use default
+            if (customCloseDelay > 0)
+            {
+                this.closeDelay = customCloseDelay;
+            }
 
             if (startOpen)
             {

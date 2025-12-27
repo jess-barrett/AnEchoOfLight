@@ -486,8 +486,8 @@ namespace GameProject2.Screens
             // Update managers
             CheckpointManager.Update(dt);
 
-            // Filter collision boxes to remove open door colliders
-            var collisionBoxes = GauntletManager.FilterCollisionBoxes(RoomManager.CollisionBoxes);
+            // Filter collision boxes (removes boss door collider when boss is defeated)
+            var collisionBoxes = GauntletManager.FilterCollisionBoxes(RoomManager.CollisionBoxes, orcKingDefeated);
 
             EntityManager.Update(gameTime, player, collisionBoxes);
             GauntletManager.Update(gameTime, player, collisionBoxes);
@@ -587,7 +587,7 @@ namespace GameProject2.Screens
             particleSystem.Update(gameTime);
 
             // Rebuild collision boxes with current crate state (after crates may have been destroyed)
-            var playerCollisionBoxes = new List<Rectangle>(GauntletManager.FilterCollisionBoxes(RoomManager.CollisionBoxes));
+            var playerCollisionBoxes = new List<Rectangle>(GauntletManager.FilterCollisionBoxes(RoomManager.CollisionBoxes, orcKingDefeated));
             playerCollisionBoxes.AddRange(EntityManager.GetCrateCollisionBoxes());
 
             player.Update(gameTime, EntityManager.GetEnemiesMutable(), particleSystem, playerCollisionBoxes, RoomManager.WaterBoxes);
@@ -998,6 +998,13 @@ namespace GameProject2.Screens
             player.Animation = player.idleAnimations[(int)player.Direction];
 
             hud.CurrentHealth = hud.MaxHealth;
+
+            // Stop boss fight music before loading room to prevent false "boss defeated" trigger
+            // (LoadRoom clears EntityManager, which would set OrcBoss to null while music is still playing)
+            if (AudioManager.IsBossFightMusicPlaying())
+            {
+                AudioManager.StopMusic();
+            }
 
             LoadRoom(CheckpointManager.LastCheckpointRoom, CheckpointManager.LastCheckpointName);
 
